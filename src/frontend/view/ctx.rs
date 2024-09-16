@@ -1,12 +1,13 @@
 use crate::frontend::command::plainer::exec_command;
 use crate::util::char::is_char_printable;
-use crossterm::event::{Event, KeyCode, KeyEventKind};
+use crossterm::event::{Event, KeyCode, KeyEventKind, KeyModifiers};
 use crossterm::{cursor, execute, style};
 use std::collections::VecDeque;
 use std::io;
 use std::sync::Arc;
 use tokio::sync::Semaphore;
 use tokio::sync::RwLock;
+use crate::util::ctx::AppEventLoopContext;
 
 #[derive(Clone)]
 pub struct PrinterCtx {
@@ -47,13 +48,15 @@ impl PrinterCtx {
     }
     async fn flush_input(&self) -> anyhow::Result<()> {
         let (tem_w, tem_h) = crossterm::terminal::size()?;
-        let _permit = self.signal.acquire().await?;
         let buf = &*self.write_buffer.read().await;
         let to_show_slice_from = if buf.len() < tem_w as usize { 0 } else { buf.len() - tem_w as usize };
-        execute!(io::stdout(), cursor::MoveTo(0, tem_h - 1))?;
-        execute!(io::stdout(), style::Print(" ".repeat(tem_w as usize)))?;
-        execute!(io::stdout(), cursor::MoveTo(0, tem_h - 1))?;
-        execute!(io::stdout(), style::Print(&buf[to_show_slice_from..]))?;
+        {
+            let _permit = self.signal.acquire().await?;
+            execute!(io::stdout(), cursor::MoveTo(0, tem_h - 1))?;
+            execute!(io::stdout(), style::Print(" ".repeat(tem_w as usize)))?;
+            execute!(io::stdout(), cursor::MoveTo(0, tem_h - 1))?;
+            execute!(io::stdout(), style::Print(&buf[to_show_slice_from..]))?;
+        }
         Ok(())
     }
     async fn flush_screen_buffer(&self) -> anyhow::Result<()> {
@@ -93,10 +96,17 @@ impl PrinterCtx {
         Ok(())
     }
 }
-pub async fn hd_terminal_event(ctx: &mut PrinterCtx, screen_event: &Event) -> anyhow::Result<()> {
+pub async fn hd_terminal_event(app: &AppEventLoopContext, ctx: &mut PrinterCtx, screen_event: &Event) -> anyhow::Result<()> {
     //处理按键event
     if let Event::Key(key) = screen_event {
-        //只处理按下，不处理释放
+        //处理ctrl+c
+        if key.modifiers.contains(KeyModifiers::CONTROL) && key.code == KeyCode::Char('c') {
+            println!("Ctrl+C pressed, exiting...");
+            app.close().await;
+            println!("Press any key to quit");
+            return Ok(());
+        }
+        //只处理按下，不处理释放,防止重复导致的问题
         if key.kind == KeyEventKind::Release {
             return Ok(());
         }

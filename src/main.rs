@@ -9,11 +9,22 @@ mod util;
 
 #[tokio::main]
 async fn main() {
+    let res = run_application().await;
+    MainApplication::defer_finally().await;
+    match res {
+        Ok(_) => (),
+        Err(e) => panic!("{}", e)
+    }
+}
+async fn run_application() -> anyhow::Result<()> {
     let mut app = MainApplication::init()
         .await
-        .expect("Could not initialize application:");
-    app.run().await.expect("Error while running application:");
+        .map_err(|e| anyhow::anyhow!("Could not initialize application: {}",e))?;
+    app.run()
+        .await
+        .map_err(|e| anyhow::anyhow!("Error while running application:{}", e))?;
     app.destroy()
         .await
-        .expect("Error while destroying application:");
+        .map_err(|e| anyhow::anyhow!("Error while destroying application:{}",e))?;
+    Ok(())
 }
