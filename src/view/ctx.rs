@@ -1,4 +1,4 @@
-use crossterm::{cursor, execute, queue, style};
+use crossterm::{cursor, execute, style};
 use std::collections::VecDeque;
 use std::sync::Arc;
 use std::io;
