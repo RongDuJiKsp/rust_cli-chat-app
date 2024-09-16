@@ -33,6 +33,7 @@ impl MainApplication {
         //init printer
         PrintEventHandler::init_screen()?;
         let printer = PrintEventHandler::run_ctx()?;
+        printer.0.flush_all().await?;
         //init conn
         let connector = ConnectHandler::bind(&format!("0.0.0.0:{}", listener_port)).await?;
         //init loop_ctx

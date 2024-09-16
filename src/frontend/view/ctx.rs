@@ -7,13 +7,16 @@ use std::io;
 use std::sync::Arc;
 use tokio::sync::Semaphore;
 use tokio::sync::RwLock;
+use crate::frontend::command::status::CommandStatusCtx;
 use crate::util::ctx::AppEventLoopContext;
 
 #[derive(Clone)]
 pub struct PrinterCtx {
     write_buffer: Arc<RwLock<String>>,
     screen_buffer: Arc<RwLock<VecDeque<String>>>,
+    command_status_ctx: Arc<RwLock<CommandStatusCtx>>,
     signal: Arc<Semaphore>,
+
 }
 impl PrinterCtx {
     pub fn new() -> PrinterCtx {
@@ -21,11 +24,20 @@ impl PrinterCtx {
             write_buffer: Arc::new(RwLock::new(String::new())),
             screen_buffer: Arc::new(RwLock::new(VecDeque::new())),
             signal: Arc::new(Semaphore::new(1)), //flush lock
+            command_status_ctx: Arc::new(RwLock::new(CommandStatusCtx::new())),
         }
+    }
+    pub async fn flush_all(&self) -> anyhow::Result<()> {
+        self.flush_screen_buffer().await?;
+        self.flush_input().await?;
+        self.flush_status().await?;
+        Ok(())
     }
     pub async fn user_ascii_input(&self, input: char) -> anyhow::Result<()> {
         self.write_buffer.write().await.push(input);
         self.flush_input().await?;
+        self.command_status_ctx.write().await.typed_alpha += 1;
+        self.flush_status().await?;
         Ok(())
     }
     pub async fn user_conform(&self) -> anyhow::Result<()> {
@@ -39,11 +51,27 @@ impl PrinterCtx {
         self.flush_screen_buffer().await?;
         self.write_buffer.write().await.clear();
         self.flush_input().await?;
+        self.command_status_ctx.write().await.typed_command += 1;
+        self.flush_status().await?;
         Ok(())
     }
     pub async fn user_backspace(&self) -> anyhow::Result<()> {
         self.write_buffer.write().await.pop();
         self.flush_input().await?;
+        self.flush_status().await?;
+        Ok(())
+    }
+    async fn flush_status(&self) -> anyhow::Result<()> {
+        let (tem_w, tem_h) = crossterm::terminal::size()?;
+        let status = self.command_status_ctx.read().await.to_string();
+        {
+            let _permit = self.signal.acquire().await?;
+            let mut stdout = io::stdout();
+            execute!(stdout, cursor::SavePosition)?;
+            execute!(stdout,cursor::MoveTo(0,tem_h-2))?;
+            execute!(stdout,style::Print(&status.to_string()[0..status.len().min(tem_w as usize)]))?;
+            execute!(stdout, cursor::RestorePosition)?;
+        }
         Ok(())
     }
     async fn flush_input(&self) -> anyhow::Result<()> {
