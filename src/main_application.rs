@@ -2,9 +2,7 @@ use crate::backend::connect::ctx::ConnCtx;
 use crate::backend::connect::event::{ConnChan, ConnectHandler};
 use crate::frontend::view::ctx::{hd_terminal_event, PrinterCtx};
 use crate::frontend::view::event::{PrintEventHandler, PrinterChan};
-use crate::util::char::is_char_printable;
 use clap::Parser;
-use crossterm::event::{Event, KeyCode};
 use tokio::select;
 
 #[derive(Parser)]

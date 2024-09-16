@@ -1,12 +1,12 @@
 use crate::frontend::command::plainer::exec_command;
+use crate::util::char::is_char_printable;
+use crossterm::event::{Event, KeyCode};
 use crossterm::{cursor, execute, style};
 use std::collections::VecDeque;
 use std::io;
 use std::sync::Arc;
-use crossterm::event::{Event, KeyCode};
 use tokio::sync::Semaphore;
-use tokio::sync::{Mutex, RwLock};
-use crate::util::char::is_char_printable;
+use tokio::sync::RwLock;
 
 #[derive(Clone)]
 pub struct PrinterCtx {
