@@ -35,8 +35,9 @@ impl PrinterCtx {
             buf_writer.push_back(output);
         }
         drop(buf_writer);
-        self.flush_input().await?;
+        self.flush_screen_buffer().await?;
         self.write_buffer.write().await.clear();
+        self.flush_input().await?;
         Ok(())
     }
     pub async fn user_backspace(&self) -> anyhow::Result<()> {
@@ -55,7 +56,7 @@ impl PrinterCtx {
     }
     async fn flush_screen_buffer(&self) -> anyhow::Result<()> {
         let (tem_w, tem_h) = crossterm::terminal::size()?;
-        let permit = self.signal.acquire().await?;
+        let _permit = self.signal.acquire().await?;
         let bufs = &*self.screen_buffer.read().await;
         let to_show_slice_from = if bufs.len() < (tem_h as usize - 2) { 0 } else { bufs.len() - (tem_h as usize - 2) };
         let mut stdout = io::stdout();
@@ -66,7 +67,6 @@ impl PrinterCtx {
             execute!(io::stdout(), style::Print(to_show))?;
         }
         execute!(stdout, cursor::RestorePosition)?;
-        permit.forget();
         Ok(())
     }
 }
