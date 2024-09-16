@@ -57,18 +57,39 @@ impl PrinterCtx {
         Ok(())
     }
     async fn flush_screen_buffer(&self) -> anyhow::Result<()> {
+        //得到终端尺寸
         let (tem_w, tem_h) = crossterm::terminal::size()?;
-        let _permit = self.signal.acquire().await?;
-        let bufs = &*self.screen_buffer.read().await;
-        let to_show_slice_from = if bufs.len() < (tem_h as usize - 2) { 0 } else { bufs.len() - (tem_h as usize - 2) };
-        let mut stdout = io::stdout();
-        execute!(stdout, cursor::SavePosition)?;
-        for (idx, to_show) in bufs.iter().skip(to_show_slice_from).enumerate() {
-            let i = idx - to_show_slice_from;
-            execute!(stdout, cursor::MoveTo(0, i as u16))?;
-            execute!(io::stdout(), style::Print(to_show))?;
+        //缓冲区
+        let mut screen_print_idx = tem_h as i32 - 3;
+        let mut out_buf = Vec::with_capacity(screen_print_idx as usize);
+        {
+            //加锁，将缓存区内的字符串换行写入缓冲区
+            let bufs = &*self.screen_buffer.read().await;
+            for to_print in bufs.iter().rev() {
+                let chars = to_print.chars().collect::<Vec<char>>();
+                if screen_print_idx < 0 {
+                    break;
+                }
+                for chuck in chars.chunks(tem_w as usize).rev() {
+                    if screen_print_idx < 0 {
+                        break;
+                    }
+                    out_buf.push(chuck.iter().collect::<String>());
+                    screen_print_idx -= 1;
+                }
+            }
         }
-        execute!(stdout, cursor::RestorePosition)?;
+        //输出缓冲区
+        {
+            let _permit = self.signal.acquire().await?;
+            let mut stdout = io::stdout();
+            execute!(stdout, cursor::SavePosition)?;
+            for (local, chuck) in out_buf.into_iter().rev().enumerate() {
+                execute!(stdout,cursor::MoveTo(0,local as u16))?;
+                execute!(stdout,style::Print(chuck))?;
+            }
+            execute!(stdout, cursor::RestorePosition)?;
+        }
         Ok(())
     }
 }
