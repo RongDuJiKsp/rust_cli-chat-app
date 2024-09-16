@@ -1,4 +1,9 @@
 use clap::Parser;
+use tokio::select;
+use crate::connect::ctx::ConnCtx;
+use crate::connect::event::{ConnChan, ConnectHandler};
+use crate::view::ctx::PrinterCtx;
+use crate::view::event::{PrintEventHandler, PrinterChan};
 
 #[derive(Parser)]
 struct ApplicationArgs {
@@ -15,15 +20,35 @@ struct ApplicationArgs {
 pub struct MainApplication {
     args: ApplicationArgs,
     listener_port: u16,
+    printer: (PrinterCtx, PrinterChan),
+    connector: (ConnCtx, ConnChan),
 }
 impl MainApplication {
-    pub fn init() -> anyhow::Result<MainApplication> {
+    pub async fn init() -> anyhow::Result<MainApplication> {
+        //read args
         let args = ApplicationArgs::parse();
         let listener_port = args.port.unwrap_or_else(|| 0);
-        Ok(MainApplication { args, listener_port })
+        //init printer
+        PrintEventHandler::init_screen()?;
+        let printer = PrintEventHandler::run_ctx()?;
+        //init conn
+        let connector = ConnectHandler::bind(&format!("0.0.0.0:{}", listener_port)).await?;
+        //ok
+        Ok(MainApplication { args, listener_port, printer, connector })
     }
-    pub async fn run(&self) -> anyhow::Result<()> {
+    pub async fn run(&mut self) -> anyhow::Result<()> {
+        let (printer_ctx, printer_chan) = &mut self.printer;
+        let (conn_ctx, conn_chan) = &mut self.connector;
+        loop {
+            select! {
+                key_event = printer_chan.recv() => {
 
+                },
+                conn_event = conn_chan.recv() => {
+
+                }
+            }
+        }
         Ok(())
     }
 }
