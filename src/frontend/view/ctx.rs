@@ -51,6 +51,8 @@ impl PrinterCtx {
         let buf = &*self.write_buffer.read().await;
         let to_show_slice_from = if buf.len() < tem_w as usize { 0 } else { buf.len() - tem_w as usize };
         execute!(io::stdout(), cursor::MoveTo(0, tem_h - 1))?;
+        execute!(io::stdout(), style::Print(" ".repeat(tem_w as usize)))?;
+        execute!(io::stdout(), cursor::MoveTo(0, tem_h - 1))?;
         execute!(io::stdout(), style::Print(&buf[to_show_slice_from..]))?;
         Ok(())
     }
