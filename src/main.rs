@@ -9,6 +9,6 @@ mod connect;
 
 #[tokio::main]
 async fn main() {
-    let app = MainApplication::init().await.expect("Could not initialize application:");
+    let mut app = MainApplication::init().await.expect("Could not initialize application:");
     app.run().await.expect("Error while running application:");
 }
