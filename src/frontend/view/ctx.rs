@@ -39,6 +39,11 @@ impl PrinterCtx {
         self.write_buffer.write().await.clear();
         Ok(())
     }
+    pub async fn user_backspace(&self) -> anyhow::Result<()> {
+        self.write_buffer.write().await.pop();
+        self.flush_input().await?;
+        Ok(())
+    }
     async fn flush_input(&self) -> anyhow::Result<()> {
         let (tem_w, tem_h) = crossterm::terminal::size()?;
         let _permit = self.signal.acquire().await?;
@@ -78,6 +83,9 @@ pub async fn hd_terminal_event(ctx: &mut PrinterCtx, screen_event: &Event) -> an
             }
             KeyCode::Char(c) if is_char_printable(c) => {
                 ctx.user_ascii_input(c).await?;
+            }
+            KeyCode::Backspace => {
+                ctx.user_backspace().await?;
             }
             _ => {}
         }
