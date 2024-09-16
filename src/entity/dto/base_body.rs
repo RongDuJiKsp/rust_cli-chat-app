@@ -25,12 +25,13 @@ impl BaseSocketMessageBody {
                     Ok(Some(res))
                 }
                 SocketBodyType::Base64 => {
-                    let bin = base64::engine::general_purpose::STANDARD.decode(serialized.clone())?;
+                    let bin =
+                        base64::engine::general_purpose::STANDARD.decode(serialized.clone())?;
                     let res = serde_json::from_slice::<I>(&bin)?;
                     Ok(Some(res))
                 }
             },
-            None => Ok(None)
+            None => Ok(None),
         }
     }
 }

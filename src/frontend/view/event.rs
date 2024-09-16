@@ -1,12 +1,14 @@
 use crate::config::buffer_size;
-use crate::view::ctx::PrinterCtx;
+use crate::frontend::view::ctx::PrinterCtx;
 use crossterm::event::Event;
-use crossterm::{event, terminal};
+use crossterm::terminal::ClearType;
+use crossterm::{event, execute, terminal};
 use tokio::sync::mpsc::Receiver;
 pub type PrinterChan = Receiver<Event>;
 pub struct PrintEventHandler {}
 impl PrintEventHandler {
     pub fn init_screen() -> anyhow::Result<()> {
+        execute!(std::io::stdout(), terminal::Clear(ClearType::All))?;
         terminal::enable_raw_mode()?;
         Ok(())
     }

@@ -1,8 +1,10 @@
-use crate::connect::ctx::ConnCtx;
-use crate::connect::event::{ConnChan, ConnectHandler};
-use crate::view::ctx::PrinterCtx;
-use crate::view::event::{PrintEventHandler, PrinterChan};
+use crate::backend::connect::ctx::ConnCtx;
+use crate::backend::connect::event::{ConnChan, ConnectHandler};
+use crate::frontend::view::ctx::{hd_terminal_event, PrinterCtx};
+use crate::frontend::view::event::{PrintEventHandler, PrinterChan};
+use crate::util::char::is_char_printable;
 use clap::Parser;
+use crossterm::event::{Event, KeyCode};
 use tokio::select;
 
 #[derive(Parser)]
@@ -34,19 +36,22 @@ impl MainApplication {
         //init conn
         let connector = ConnectHandler::bind(&format!("0.0.0.0:{}", listener_port)).await?;
         //ok
-        Ok(MainApplication { args, listener_port, printer, connector })
+        Ok(MainApplication {
+            args,
+            listener_port,
+            printer,
+            connector,
+        })
     }
     pub async fn run(&mut self) -> anyhow::Result<()> {
         let (printer_ctx, printer_chan) = &mut self.printer;
         let (conn_ctx, conn_chan) = &mut self.connector;
         loop {
             select! {
-                key_event = printer_chan.recv() => {
-
-                },
-                conn_event = conn_chan.recv() => {
-
+                Some(screen_event) = printer_chan.recv() => {
+                    hd_terminal_event(printer_ctx,&screen_event).await?;
                 }
+                Some(conn_event) = conn_chan.recv() => {}
             }
         }
     }
