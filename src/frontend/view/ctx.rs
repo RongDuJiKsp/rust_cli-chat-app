@@ -1,6 +1,6 @@
 use crate::frontend::command::plainer::exec_command;
 use crate::util::char::is_char_printable;
-use crossterm::event::{Event, KeyCode};
+use crossterm::event::{Event, KeyCode, KeyEventKind};
 use crossterm::{cursor, execute, style};
 use std::collections::VecDeque;
 use std::io;
@@ -45,7 +45,6 @@ impl PrinterCtx {
         let buf = &*self.write_buffer.read().await;
         let to_show_slice_from = if buf.len() < tem_w as usize { 0 } else { buf.len() - tem_w as usize };
         execute!(io::stdout(), cursor::MoveTo(0, tem_h - 1))?;
-        execute!(io::stdout(), cursor::MoveTo(0, tem_w - 1))?;
         execute!(io::stdout(), style::Print(&buf[to_show_slice_from..]))?;
         Ok(())
     }
@@ -69,6 +68,10 @@ impl PrinterCtx {
 pub async fn hd_terminal_event(ctx: &mut PrinterCtx, screen_event: &Event) -> anyhow::Result<()> {
     //处理按键event
     if let Event::Key(key) = screen_event {
+        //只处理按下，不处理释放
+        if key.kind == KeyEventKind::Release {
+            return Ok(());
+        }
         match key.code {
             KeyCode::Enter => {
                 ctx.user_conform().await?;
