@@ -1,9 +1,9 @@
+use crate::config::buffer_size;
+use crate::connect::ctx::ConnCtx;
 use std::net::SocketAddr;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync;
 use tokio::sync::mpsc::Receiver;
-use crate::config::buffer_size;
-use crate::connect::ctx::ConnCtx;
 
 type ConnPointHd = (TcpStream, SocketAddr);
 pub type ConnChan = Receiver<ConnPointHd>;
@@ -14,8 +14,10 @@ impl ConnectHandler {
         let (tx, rx) = sync::mpsc::channel(buffer_size::CONNECT_BUFFER_SIZE);
         tokio::spawn(async move {
             loop {
-                let hd: ConnPointHd = listener.accept().await?;
-                tx.send(hd).await?;
+                if let Ok(hd) = listener.accept().await {
+                    //TODO:logger
+                    let _ = tx.send(hd).await;
+                }
             }
         });
         Ok((ConnCtx::new(), rx))

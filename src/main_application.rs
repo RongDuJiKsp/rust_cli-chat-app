@@ -1,9 +1,9 @@
-use clap::Parser;
-use tokio::select;
 use crate::connect::ctx::ConnCtx;
 use crate::connect::event::{ConnChan, ConnectHandler};
 use crate::view::ctx::PrinterCtx;
 use crate::view::event::{PrintEventHandler, PrinterChan};
+use clap::Parser;
+use tokio::select;
 
 #[derive(Parser)]
 struct ApplicationArgs {
@@ -13,7 +13,7 @@ struct ApplicationArgs {
     bind_ip: Option<String>,
     #[clap(short = 'n', long = "nick")]
     nick: Option<String>,
-    #[clap(short = "buf", long = "channel_size", default_value = 1024)]
+    #[clap(short = 'f', long = "channel_size", default_value = "1024")]
     channel_size: usize,
 }
 
@@ -49,5 +49,10 @@ impl MainApplication {
                 }
             }
         }
+    }
+    pub async fn destroy(&mut self) -> anyhow::Result<()> {
+        //destroy screen
+        PrintEventHandler::delete_screen()?;
+        Ok(())
     }
 }

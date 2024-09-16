@@ -1,6 +1,6 @@
-use std::cmp::PartialEq;
 use base64::Engine;
 use serde::{Deserialize, Serialize};
+use std::cmp::PartialEq;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub enum SocketBodyType {
@@ -16,25 +16,21 @@ pub struct BaseSocketMessageBody {
     body: Option<String>,
 }
 
-
-impl<I: Deserialize> TryInto<I> for BaseSocketMessageBody {
-    type Error = anyhow::Error;
-
-    fn try_into(self) -> anyhow::Result<Option<I>> {
-        if self.body.is_none() {
-            return Ok(None);
-        }
-        let Some(serialized) = self.body;
-        match self.content_type {
-            SocketBodyType::Plain => {
-                let res = serde_json::from_str(&serialized)?;
-                Ok(Some(res))
-            }
-            SocketBodyType::Base64 => {
-                let bin = base64::engine::general_purpose::STANDARD.decode(&serialized)?;
-                let res = serde_json::from_slice::<I>(&bin)?;
-                Ok(Some(res))
-            }
+impl BaseSocketMessageBody {
+    fn try_trans<I: for<'a> Deserialize<'a>>(self) -> anyhow::Result<Option<I>> {
+        match self.body {
+            Some(serialized) => match self.content_type {
+                SocketBodyType::Plain => {
+                    let res = serde_json::from_str(&serialized)?;
+                    Ok(Some(res))
+                }
+                SocketBodyType::Base64 => {
+                    let bin = base64::engine::general_purpose::STANDARD.decode(serialized.clone())?;
+                    let res = serde_json::from_slice::<I>(&bin)?;
+                    Ok(Some(res))
+                }
+            },
+            None => Ok(None)
         }
     }
 }

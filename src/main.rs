@@ -11,4 +11,5 @@ mod connect;
 async fn main() {
     let mut app = MainApplication::init().await.expect("Could not initialize application:");
     app.run().await.expect("Error while running application:");
+    app.destroy().await.expect("Error while destroying application:");
 }
