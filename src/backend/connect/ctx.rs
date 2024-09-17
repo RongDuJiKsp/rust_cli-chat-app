@@ -2,13 +2,14 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::net::TcpStream;
 use tokio::sync::Mutex;
-pub struct SocketCtx {
+#[derive(Clone)]
+pub struct SocketConnectCtx {
     addr: SocketAddr,
-    stream: TcpStream,
+    stream: Arc<Mutex<TcpStream>>,
 }
 #[derive(Clone)]
 pub struct ConnCtx {
-    connects: Arc<Mutex<Vec<SocketCtx>>>,
+    connects: Arc<Mutex<Vec<SocketConnectCtx>>>,
 }
 impl ConnCtx {
     pub fn new() -> ConnCtx {

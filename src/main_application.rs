@@ -17,13 +17,20 @@ struct ApplicationArgs {
     #[clap(short = 'f', long = "channel_size", default_value = "1024")]
     channel_size: usize,
 }
-
+pub struct ApplicationCtxUnions {
+    pub printer: PrinterCtx,
+    pub conn: ConnCtx,
+    pub event_loop: AppEventLoopContext,
+}
+pub struct ChannelUnions {
+    printer: PrinterChan,
+    conn: ConnChan,
+}
 pub struct MainApplication {
     args: ApplicationArgs,
     listener_port: u16,
-    printer: (PrinterCtx, PrinterChan),
-    connector: (ConnCtx, ConnChan),
-    event_loop_ctx: AppEventLoopContext,
+    ctx: ApplicationCtxUnions,
+    channel_unions: ChannelUnions,
 }
 impl MainApplication {
     pub async fn init() -> anyhow::Result<MainApplication> {
@@ -32,33 +39,40 @@ impl MainApplication {
         let listener_port = args.port.unwrap_or_else(|| 0);
         //init printer
         PrintEventHandler::init_screen()?;
-        let printer = PrintEventHandler::run_ctx()?;
-        printer.0.flush_all().await?;
+        let (printer_ctx, printer_chan) = PrintEventHandler::run_ctx()?;
+        printer_ctx.flush_all().await?;
         //init conn
-        let connector = ConnectHandler::bind(&format!("0.0.0.0:{}", listener_port)).await?;
+        let (conn_ctx, conn_chan) =
+            ConnectHandler::bind(&format!("0.0.0.0:{}", listener_port)).await?;
         //init loop_ctx
         let event_loop_ctx = AppEventLoopContext::init();
         //ok
+        let ctx = ApplicationCtxUnions {
+            printer: printer_ctx,
+            conn: conn_ctx,
+            event_loop: event_loop_ctx,
+        };
+        let channel_unions = ChannelUnions {
+            printer: printer_chan,
+            conn: conn_chan,
+        };
         Ok(MainApplication {
             args,
             listener_port,
-            printer,
-            connector,
-            event_loop_ctx,
+            ctx,
+            channel_unions,
         })
     }
     pub async fn defer_finally() {
         println!("程序正在清理...");
     }
     pub async fn run(&mut self) -> anyhow::Result<()> {
-        let (printer_ctx, printer_chan) = &mut self.printer;
-        let (conn_ctx, conn_chan) = &mut self.connector;
-        while *self.event_loop_ctx.event_looping.read().await {
+        while *self.ctx.event_loop.event_looping.read().await {
             select! {
-                Some(screen_event) = printer_chan.recv() => {
-                    hd_terminal_event(&self.event_loop_ctx,printer_ctx,&screen_event).await?;
+                Some(screen_event) = self.channel_unions.printer.recv() => {
+                    hd_terminal_event(&mut self.ctx,&screen_event).await?;
                 }
-                Some(conn_event) = conn_chan.recv() => {}
+                Some(conn_event) = self.channel_unions.conn.recv() => {}
             }
         }
         Ok(())

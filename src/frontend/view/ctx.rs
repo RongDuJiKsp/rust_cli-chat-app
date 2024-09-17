@@ -1,7 +1,7 @@
 use crate::frontend::command::plainer::CommendPlainer;
 use crate::frontend::command::status::CommandStatusCtx;
+use crate::main_application::ApplicationCtxUnions;
 use crate::util::char::is_char_printable;
-use crate::util::event_loop::AppEventLoopContext;
 use crossterm::event::{Event, KeyCode, KeyEventKind, KeyModifiers};
 use crossterm::{cursor, execute, style, terminal};
 use std::collections::VecDeque;
@@ -157,10 +157,11 @@ impl PrinterCtx {
     }
 }
 pub async fn hd_terminal_event(
-    app: &AppEventLoopContext,
-    ctx: &mut PrinterCtx,
+    application: &mut ApplicationCtxUnions,
     screen_event: &Event,
 ) -> anyhow::Result<()> {
+    let mut ctx = &application.printer;
+    let mut app = &application.event_loop;
     //处理按键event
     if let Event::Key(key) = screen_event {
         //处理ctrl+c
