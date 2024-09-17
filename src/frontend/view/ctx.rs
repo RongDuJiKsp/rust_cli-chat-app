@@ -1,7 +1,7 @@
 use crate::frontend::command::plainer::exec_command;
 use crate::util::char::is_char_printable;
 use crossterm::event::{Event, KeyCode, KeyEventKind, KeyModifiers};
-use crossterm::{cursor, execute, style};
+use crossterm::{cursor, execute, style, terminal};
 use std::collections::VecDeque;
 use std::io;
 use std::sync::Arc;
@@ -41,10 +41,11 @@ impl PrinterCtx {
         Ok(())
     }
     pub async fn user_conform(&self) -> anyhow::Result<()> {
-        self.command_status_ctx.write().await.typed_command += 1;
+        let mut status_ref = self.command_status_ctx.write().await;
         let mut out_buf = Vec::new();
         let mut user_input = self.write_buffer.write().await;
         exec_command(&*user_input, &mut out_buf).await?;
+        status_ref.last_command = user_input.clone();
         user_input.clear();
         drop(user_input);
         let mut buf_writer = self.screen_buffer.write().await;
@@ -52,6 +53,7 @@ impl PrinterCtx {
             buf_writer.push_back(output);
         }
         drop(buf_writer);
+        drop(status_ref);
         self.flush_all().await?;
         Ok(())
     }
@@ -70,13 +72,14 @@ impl PrinterCtx {
             let _permit = lock_ref.acquire().await.expect("Couldn't acquire stdout lock");
             execute!(stdout, cursor::SavePosition);
             execute!(stdout,cursor::MoveTo(0,tem_h-2));
+            execute!(stdout,terminal::Clear(terminal::ClearType::CurrentLine));
             execute!(stdout,style::Print(&status.to_string()[0..status.len().min(tem_w as usize)]));
             execute!(stdout, cursor::RestorePosition);
         });
         Ok(())
     }
     async fn flush_input(&self) -> anyhow::Result<()> {
-        let (tem_w, tem_h) = crossterm::terminal::size()?;
+        let (tem_w, tem_h) = terminal::size()?;
         let buf_ref = self.write_buffer.clone();
         let lock_ref = Arc::clone(&self.signal);
         let buf = buf_ref.read().await;
@@ -88,8 +91,7 @@ impl PrinterCtx {
             {
                 let _permit = lock_ref.acquire().await.expect("Couldn't acquire stdout lock");
                 execute!(stdout, cursor::MoveTo(0, tem_h - 1));
-                execute!(stdout, style::Print(" ".repeat(tem_w as usize)));
-                execute!(stdout, cursor::MoveTo(0, tem_h - 1));
+                execute!(stdout,terminal::Clear(terminal::ClearType::CurrentLine));
                 execute!(stdout, style::Print(&buf[to_show_slice_from..]));
             }
         });
@@ -127,8 +129,7 @@ impl PrinterCtx {
                 execute!(stdout, cursor::SavePosition);
                 for (local, chuck) in out_buf.into_iter().rev().enumerate() {
                     execute!(stdout, cursor::MoveTo(0, local as u16));
-                    execute!(stdout, style::Print(" ".repeat(tem_w as usize)));
-                    execute!(stdout,cursor::MoveTo(0,local as u16));
+                    execute!(stdout,terminal::Clear(terminal::ClearType::CurrentLine));
                     execute!(stdout,style::Print(chuck));
                 }
                 execute!(stdout, cursor::RestorePosition);
