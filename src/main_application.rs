@@ -4,7 +4,7 @@ use crate::frontend::view::ctx::{hd_terminal_event, PrinterCtx};
 use crate::frontend::view::event::{PrintEventHandler, PrinterChan};
 use clap::Parser;
 use tokio::{select};
-use crate::util::ctx::AppEventLoopContext;
+use crate::util::event_loop::AppEventLoopContext;
 
 #[derive(Parser)]
 struct ApplicationArgs {

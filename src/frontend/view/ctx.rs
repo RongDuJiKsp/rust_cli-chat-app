@@ -1,4 +1,4 @@
-use crate::frontend::command::plainer::exec_command;
+use crate::frontend::command::plainer::{CommendPlainer};
 use crate::util::char::is_char_printable;
 use crossterm::event::{Event, KeyCode, KeyEventKind, KeyModifiers};
 use crossterm::{cursor, execute, style, terminal};
@@ -8,14 +8,14 @@ use std::sync::Arc;
 use tokio::sync::Semaphore;
 use tokio::sync::RwLock;
 use crate::frontend::command::status::CommandStatusCtx;
-use crate::util::ctx::AppEventLoopContext;
+use crate::util::event_loop::AppEventLoopContext;
 
 #[derive(Clone)]
 pub struct PrinterCtx {
     write_buffer: Arc<RwLock<String>>,
     screen_buffer: Arc<RwLock<VecDeque<String>>>,
     command_status_ctx: Arc<RwLock<CommandStatusCtx>>,
-    signal: Arc<Semaphore>,
+    stdout_lock: Arc<Semaphore>,
 
 }
 impl PrinterCtx {
@@ -23,7 +23,7 @@ impl PrinterCtx {
         PrinterCtx {
             write_buffer: Arc::new(RwLock::new(String::new())),
             screen_buffer: Arc::new(RwLock::new(VecDeque::new())),
-            signal: Arc::new(Semaphore::new(1)), //flush lock
+            stdout_lock: Arc::new(Semaphore::new(1)),
             command_status_ctx: Arc::new(RwLock::new(CommandStatusCtx::new())),
         }
     }
@@ -42,14 +42,16 @@ impl PrinterCtx {
     }
     pub async fn user_conform(&self) -> anyhow::Result<()> {
         let mut status_ref = self.command_status_ctx.write().await;
-        let mut out_buf = Vec::new();
         let mut user_input = self.write_buffer.write().await;
-        exec_command(&*user_input, &mut out_buf).await?;
+        let exec_res = CommendPlainer::exec_command(&*user_input).await?;
         status_ref.last_command = user_input.clone();
         user_input.clear();
         drop(user_input);
         let mut buf_writer = self.screen_buffer.write().await;
-        for output in out_buf.into_iter() {
+        if exec_res.need_clear() {
+            buf_writer.clear();
+        }
+        for output in exec_res.output().into_iter() {
             buf_writer.push_back(output);
         }
         drop(buf_writer);
@@ -66,7 +68,7 @@ impl PrinterCtx {
     async fn flush_status(&self) -> anyhow::Result<()> {
         let (tem_w, tem_h) = crossterm::terminal::size()?;
         let status = self.command_status_ctx.read().await.to_string();
-        let lock_ref = Arc::clone(&self.signal);
+        let lock_ref = Arc::clone(&self.stdout_lock);
         tokio::spawn(async move {
             let mut stdout = io::stdout();
             let _permit = lock_ref.acquire().await.expect("Couldn't acquire stdout lock");
@@ -81,7 +83,7 @@ impl PrinterCtx {
     async fn flush_input(&self) -> anyhow::Result<()> {
         let (tem_w, tem_h) = terminal::size()?;
         let buf_ref = self.write_buffer.clone();
-        let lock_ref = Arc::clone(&self.signal);
+        let lock_ref = Arc::clone(&self.stdout_lock);
         let buf = buf_ref.read().await;
         let to_show_slice_from = if buf.len() < tem_w as usize { 0 } else { buf.len() - tem_w as usize };
         drop(buf);
@@ -104,7 +106,7 @@ impl PrinterCtx {
         let mut screen_print_idx = tem_h as i32 - 3;
         let mut out_buf = Vec::with_capacity(screen_print_idx as usize);
         let screen_buf_ref = self.screen_buffer.clone();
-        let lock_ref = Arc::clone(&self.signal);
+        let lock_ref = Arc::clone(&self.stdout_lock);
         tokio::spawn(async move {
             //将缓存区内的字符串换行写入缓冲区
             let bufs = screen_buf_ref.read().await;
