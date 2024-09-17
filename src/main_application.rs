@@ -2,9 +2,9 @@ use crate::backend::connect::ctx::ConnCtx;
 use crate::backend::connect::event::{ConnChan, ConnectHandler};
 use crate::frontend::view::ctx::{hd_terminal_event, PrinterCtx};
 use crate::frontend::view::event::{PrintEventHandler, PrinterChan};
-use clap::Parser;
-use tokio::{select};
 use crate::util::event_loop::AppEventLoopContext;
+use clap::Parser;
+use tokio::select;
 
 #[derive(Parser)]
 struct ApplicationArgs {

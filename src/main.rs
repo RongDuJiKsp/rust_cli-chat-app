@@ -13,18 +13,18 @@ async fn main() {
     MainApplication::defer_finally().await;
     match res {
         Ok(_) => (),
-        Err(e) => panic!("{}", e)
+        Err(e) => panic!("{}", e),
     }
 }
 async fn run_application() -> anyhow::Result<()> {
     let mut app = MainApplication::init()
         .await
-        .map_err(|e| anyhow::anyhow!("Could not initialize application: {}",e))?;
+        .map_err(|e| anyhow::anyhow!("Could not initialize application: {}", e))?;
     app.run()
         .await
         .map_err(|e| anyhow::anyhow!("Error while running application:{}", e))?;
     app.destroy()
         .await
-        .map_err(|e| anyhow::anyhow!("Error while destroying application:{}",e))?;
+        .map_err(|e| anyhow::anyhow!("Error while destroying application:{}", e))?;
     Ok(())
 }

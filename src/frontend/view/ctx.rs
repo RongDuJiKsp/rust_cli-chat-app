@@ -1,14 +1,14 @@
-use crate::frontend::command::plainer::{CommendPlainer};
+use crate::frontend::command::plainer::CommendPlainer;
+use crate::frontend::command::status::CommandStatusCtx;
 use crate::util::char::is_char_printable;
+use crate::util::event_loop::AppEventLoopContext;
 use crossterm::event::{Event, KeyCode, KeyEventKind, KeyModifiers};
 use crossterm::{cursor, execute, style, terminal};
 use std::collections::VecDeque;
 use std::io;
 use std::sync::Arc;
-use tokio::sync::Semaphore;
 use tokio::sync::RwLock;
-use crate::frontend::command::status::CommandStatusCtx;
-use crate::util::event_loop::AppEventLoopContext;
+use tokio::sync::Semaphore;
 
 #[derive(Clone)]
 pub struct PrinterCtx {
@@ -16,7 +16,6 @@ pub struct PrinterCtx {
     screen_buffer: Arc<RwLock<VecDeque<String>>>,
     command_status_ctx: Arc<RwLock<CommandStatusCtx>>,
     stdout_lock: Arc<Semaphore>,
-
 }
 impl PrinterCtx {
     pub fn new() -> PrinterCtx {
@@ -71,11 +70,17 @@ impl PrinterCtx {
         let lock_ref = Arc::clone(&self.stdout_lock);
         tokio::spawn(async move {
             let mut stdout = io::stdout();
-            let _permit = lock_ref.acquire().await.expect("Couldn't acquire stdout lock");
+            let _permit = lock_ref
+                .acquire()
+                .await
+                .expect("Couldn't acquire stdout lock");
             execute!(stdout, cursor::SavePosition);
-            execute!(stdout,cursor::MoveTo(0,tem_h-2));
-            execute!(stdout,terminal::Clear(terminal::ClearType::CurrentLine));
-            execute!(stdout,style::Print(&status.to_string()[0..status.len().min(tem_w as usize)]));
+            execute!(stdout, cursor::MoveTo(0, tem_h - 2));
+            execute!(stdout, terminal::Clear(terminal::ClearType::CurrentLine));
+            execute!(
+                stdout,
+                style::Print(&status.to_string()[0..status.len().min(tem_w as usize)])
+            );
             execute!(stdout, cursor::RestorePosition);
         });
         Ok(())
@@ -85,15 +90,22 @@ impl PrinterCtx {
         let buf_ref = self.write_buffer.clone();
         let lock_ref = Arc::clone(&self.stdout_lock);
         let buf = buf_ref.read().await;
-        let to_show_slice_from = if buf.len() < tem_w as usize { 0 } else { buf.len() - tem_w as usize };
+        let to_show_slice_from = if buf.len() < tem_w as usize {
+            0
+        } else {
+            buf.len() - tem_w as usize
+        };
         drop(buf);
         tokio::spawn(async move {
             let buf = buf_ref.read().await;
             let mut stdout = io::stdout();
             {
-                let _permit = lock_ref.acquire().await.expect("Couldn't acquire stdout lock");
+                let _permit = lock_ref
+                    .acquire()
+                    .await
+                    .expect("Couldn't acquire stdout lock");
                 execute!(stdout, cursor::MoveTo(0, tem_h - 1));
-                execute!(stdout,terminal::Clear(terminal::ClearType::CurrentLine));
+                execute!(stdout, terminal::Clear(terminal::ClearType::CurrentLine));
                 execute!(stdout, style::Print(&buf[to_show_slice_from..]));
             }
         });
@@ -127,12 +139,15 @@ impl PrinterCtx {
             //输出缓冲区
             let mut stdout = io::stdout();
             {
-                let _permit = lock_ref.acquire().await.expect("Couldn't acquire screen buffer");
+                let _permit = lock_ref
+                    .acquire()
+                    .await
+                    .expect("Couldn't acquire screen buffer");
                 execute!(stdout, cursor::SavePosition);
                 for (local, chuck) in out_buf.into_iter().rev().enumerate() {
                     execute!(stdout, cursor::MoveTo(0, local as u16));
-                    execute!(stdout,terminal::Clear(terminal::ClearType::CurrentLine));
-                    execute!(stdout,style::Print(chuck));
+                    execute!(stdout, terminal::Clear(terminal::ClearType::CurrentLine));
+                    execute!(stdout, style::Print(chuck));
                 }
                 execute!(stdout, cursor::RestorePosition);
             }
@@ -141,7 +156,11 @@ impl PrinterCtx {
         Ok(())
     }
 }
-pub async fn hd_terminal_event(app: &AppEventLoopContext, ctx: &mut PrinterCtx, screen_event: &Event) -> anyhow::Result<()> {
+pub async fn hd_terminal_event(
+    app: &AppEventLoopContext,
+    ctx: &mut PrinterCtx,
+    screen_event: &Event,
+) -> anyhow::Result<()> {
     //处理按键event
     if let Event::Key(key) = screen_event {
         //处理ctrl+c

@@ -11,7 +11,7 @@ impl PrintEventHandler {
         terminal::enable_raw_mode()?;
         execute!(std::io::stdout(), terminal::Clear(ClearType::All))?;
         let (_tem_w, tem_h) = terminal::size()?;
-        execute!(std::io::stdout(), cursor::MoveTo(0, tem_h-1))?;
+        execute!(std::io::stdout(), cursor::MoveTo(0, tem_h - 1))?;
         Ok(())
     }
     pub fn delete_screen() -> anyhow::Result<()> {

@@ -5,9 +5,13 @@ impl CommendPlainer {
     pub async fn exec_command(command: &str) -> anyhow::Result<CommendExecResult> {
         let mut res = CommendExecResult::new();
         if command.is_empty() {
-            res.output.append(&mut LogFormatter::error("Command cannot be empty"));
+            res.output
+                .append(&mut LogFormatter::error("Command cannot be empty"));
         } else {
-            res.output.append(&mut LogFormatter::info(&format!("You Run The Command: {}", command)));
+            res.output.append(&mut LogFormatter::info(&format!(
+                "You Run The Command: {}",
+                command
+            )));
         }
         Ok(res)
     }
