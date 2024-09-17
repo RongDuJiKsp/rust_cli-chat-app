@@ -41,18 +41,18 @@ impl PrinterCtx {
         Ok(())
     }
     pub async fn user_conform(&self) -> anyhow::Result<()> {
+        self.command_status_ctx.write().await.typed_command += 1;
         let mut out_buf = Vec::new();
-        exec_command(&self.write_buffer.read().await, &mut out_buf).await?;
+        let mut user_input = self.write_buffer.write().await;
+        exec_command(&*user_input, &mut out_buf).await?;
+        user_input.clear();
+        drop(user_input);
         let mut buf_writer = self.screen_buffer.write().await;
         for output in out_buf.into_iter() {
             buf_writer.push_back(output);
         }
         drop(buf_writer);
-        self.flush_screen_buffer().await?;
-        self.write_buffer.write().await.clear();
-        self.flush_input().await?;
-        self.command_status_ctx.write().await.typed_command += 1;
-        self.flush_status().await?;
+        self.flush_all().await?;
         Ok(())
     }
     pub async fn user_backspace(&self) -> anyhow::Result<()> {
@@ -64,27 +64,35 @@ impl PrinterCtx {
     async fn flush_status(&self) -> anyhow::Result<()> {
         let (tem_w, tem_h) = crossterm::terminal::size()?;
         let status = self.command_status_ctx.read().await.to_string();
-        {
-            let _permit = self.signal.acquire().await?;
+        let lock_ref = Arc::clone(&self.signal);
+        tokio::spawn(async move {
             let mut stdout = io::stdout();
-            execute!(stdout, cursor::SavePosition)?;
-            execute!(stdout,cursor::MoveTo(0,tem_h-2))?;
-            execute!(stdout,style::Print(&status.to_string()[0..status.len().min(tem_w as usize)]))?;
-            execute!(stdout, cursor::RestorePosition)?;
-        }
+            let _permit = lock_ref.acquire().await.expect("Couldn't acquire stdout lock");
+            execute!(stdout, cursor::SavePosition);
+            execute!(stdout,cursor::MoveTo(0,tem_h-2));
+            execute!(stdout,style::Print(&status.to_string()[0..status.len().min(tem_w as usize)]));
+            execute!(stdout, cursor::RestorePosition);
+        });
         Ok(())
     }
     async fn flush_input(&self) -> anyhow::Result<()> {
         let (tem_w, tem_h) = crossterm::terminal::size()?;
-        let buf = &*self.write_buffer.read().await;
+        let buf_ref = self.write_buffer.clone();
+        let lock_ref = Arc::clone(&self.signal);
+        let buf = buf_ref.read().await;
         let to_show_slice_from = if buf.len() < tem_w as usize { 0 } else { buf.len() - tem_w as usize };
-        {
-            let _permit = self.signal.acquire().await?;
-            execute!(io::stdout(), cursor::MoveTo(0, tem_h - 1))?;
-            execute!(io::stdout(), style::Print(" ".repeat(tem_w as usize)))?;
-            execute!(io::stdout(), cursor::MoveTo(0, tem_h - 1))?;
-            execute!(io::stdout(), style::Print(&buf[to_show_slice_from..]))?;
-        }
+        drop(buf);
+        tokio::spawn(async move {
+            let buf = buf_ref.read().await;
+            let mut stdout = io::stdout();
+            {
+                let _permit = lock_ref.acquire().await.expect("Couldn't acquire stdout lock");
+                execute!(stdout, cursor::MoveTo(0, tem_h - 1));
+                execute!(stdout, style::Print(" ".repeat(tem_w as usize)));
+                execute!(stdout, cursor::MoveTo(0, tem_h - 1));
+                execute!(stdout, style::Print(&buf[to_show_slice_from..]));
+            }
+        });
         Ok(())
     }
     async fn flush_screen_buffer(&self) -> anyhow::Result<()> {
@@ -93,9 +101,11 @@ impl PrinterCtx {
         //缓冲区
         let mut screen_print_idx = tem_h as i32 - 3;
         let mut out_buf = Vec::with_capacity(screen_print_idx as usize);
-        {
-            //加锁，将缓存区内的字符串换行写入缓冲区
-            let bufs = &*self.screen_buffer.read().await;
+        let screen_buf_ref = self.screen_buffer.clone();
+        let lock_ref = Arc::clone(&self.signal);
+        tokio::spawn(async move {
+            //将缓存区内的字符串换行写入缓冲区
+            let bufs = screen_buf_ref.read().await;
             for to_print in bufs.iter().rev() {
                 let chars = to_print.chars().collect::<Vec<char>>();
                 if screen_print_idx < 0 {
@@ -109,18 +119,22 @@ impl PrinterCtx {
                     screen_print_idx -= 1;
                 }
             }
-        }
-        //输出缓冲区
-        {
-            let _permit = self.signal.acquire().await?;
+            drop(bufs);
+            //输出缓冲区
             let mut stdout = io::stdout();
-            execute!(stdout, cursor::SavePosition)?;
-            for (local, chuck) in out_buf.into_iter().rev().enumerate() {
-                execute!(stdout,cursor::MoveTo(0,local as u16))?;
-                execute!(stdout,style::Print(chuck))?;
+            {
+                let _permit = lock_ref.acquire().await.expect("Couldn't acquire screen buffer");
+                execute!(stdout, cursor::SavePosition);
+                for (local, chuck) in out_buf.into_iter().rev().enumerate() {
+                    execute!(stdout, cursor::MoveTo(0, local as u16));
+                    execute!(stdout, style::Print(" ".repeat(tem_w as usize)));
+                    execute!(stdout,cursor::MoveTo(0,local as u16));
+                    execute!(stdout,style::Print(chuck));
+                }
+                execute!(stdout, cursor::RestorePosition);
             }
-            execute!(stdout, cursor::RestorePosition)?;
-        }
+        });
+
         Ok(())
     }
 }
