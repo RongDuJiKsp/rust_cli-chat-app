@@ -1,17 +1,26 @@
+use crate::frontend::command::parser::{CommandParser, SystemCall};
+use crate::main_application::ApplicationLifetime;
 use crate::util::log_fmt::LogFormatter;
 
-pub struct CommendPlainer {}
+pub struct CommendPlainer {
+    app: ApplicationLifetime,
+}
 impl CommendPlainer {
-    pub async fn exec_command(command: &str) -> anyhow::Result<CommendExecResult> {
+    pub fn load_app(app: ApplicationLifetime) -> CommendPlainer {
+        CommendPlainer { app }
+    }
+    pub async fn exec_command(&self, command: &str) -> anyhow::Result<CommendExecResult> {
         let mut res = CommendExecResult::new();
         if command.is_empty() {
             res.output
                 .append(&mut LogFormatter::error("Command cannot be empty"));
-        } else {
-            res.output.append(&mut LogFormatter::info(&format!(
-                "You Run The Command: {}",
-                command
-            )));
+            return Ok(res);
+        }
+        let sys_call = CommandParser::parse(command);
+        match sys_call {
+            SystemCall::Unknown => {
+                res.output.append(&mut LogFormatter::error("Unknown command"));
+            }
         }
         Ok(res)
     }

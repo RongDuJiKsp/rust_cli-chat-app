@@ -17,7 +17,8 @@ struct ApplicationArgs {
     #[clap(short = 'f', long = "channel_size", default_value = "1024")]
     channel_size: usize,
 }
-pub struct ApplicationCtxUnions {
+#[derive(Clone)]
+pub struct ApplicationLifetime {
     pub printer: PrinterCtx,
     pub conn: ConnCtx,
     pub event_loop: AppEventLoopContext,
@@ -29,7 +30,7 @@ pub struct ChannelUnions {
 pub struct MainApplication {
     args: ApplicationArgs,
     listener_port: u16,
-    ctx: ApplicationCtxUnions,
+    ctx: ApplicationLifetime,
     channel_unions: ChannelUnions,
 }
 impl MainApplication {
@@ -47,7 +48,7 @@ impl MainApplication {
         //init loop_ctx
         let event_loop_ctx = AppEventLoopContext::init();
         //ok
-        let ctx = ApplicationCtxUnions {
+        let ctx = ApplicationLifetime {
             printer: printer_ctx,
             conn: conn_ctx,
             event_loop: event_loop_ctx,

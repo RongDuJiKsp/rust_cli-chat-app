@@ -9,12 +9,15 @@ pub struct SocketConnectCtx {
 }
 #[derive(Clone)]
 pub struct ConnCtx {
-    connects: Arc<Mutex<Vec<SocketConnectCtx>>>,
+    as_server: Arc<Mutex<Vec<SocketConnectCtx>>>,
+    as_client: Arc<Mutex<Vec<SocketConnectCtx>>>,
 }
 impl ConnCtx {
     pub fn new() -> ConnCtx {
         ConnCtx {
-            connects: Arc::new(Mutex::new(Vec::new())),
+            as_server: Arc::new(Mutex::new(Vec::new())),
+            as_client: Arc::new(Mutex::new(Vec::new())),
         }
     }
+
 }

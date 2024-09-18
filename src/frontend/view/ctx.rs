@@ -1,6 +1,6 @@
 use crate::frontend::command::plainer::CommendPlainer;
 use crate::frontend::command::status::CommandStatusCtx;
-use crate::main_application::ApplicationCtxUnions;
+use crate::main_application::ApplicationLifetime;
 use crate::util::char::is_char_printable;
 use crossterm::event::{Event, KeyCode, KeyEventKind, KeyModifiers};
 use crossterm::{cursor, execute, style, terminal};
@@ -39,10 +39,10 @@ impl PrinterCtx {
         self.flush_status().await?;
         Ok(())
     }
-    pub async fn user_conform(&self) -> anyhow::Result<()> {
+    pub async fn user_conform(&self, app: &ApplicationLifetime) -> anyhow::Result<()> {
         let mut status_ref = self.command_status_ctx.write().await;
         let mut user_input = self.write_buffer.write().await;
-        let exec_res = CommendPlainer::exec_command(&*user_input).await?;
+        let exec_res = CommendPlainer::load_app(app.clone()).exec_command(&*user_input).await?;
         status_ref.last_command = user_input.clone();
         user_input.clear();
         drop(user_input);
@@ -157,7 +157,7 @@ impl PrinterCtx {
     }
 }
 pub async fn hd_terminal_event(
-    application: &mut ApplicationCtxUnions,
+    application: &mut ApplicationLifetime,
     screen_event: &Event,
 ) -> anyhow::Result<()> {
     let mut ctx = &application.printer;
@@ -177,7 +177,7 @@ pub async fn hd_terminal_event(
         }
         match key.code {
             KeyCode::Enter => {
-                ctx.user_conform().await?;
+                ctx.user_conform(application).await?;
             }
             KeyCode::Char(c) if is_char_printable(c) => {
                 ctx.user_ascii_input(c).await?;
