@@ -65,7 +65,7 @@ impl PrinterCtx {
         Ok(())
     }
     async fn flush_status(&self) -> anyhow::Result<()> {
-        let (tem_w, tem_h) = crossterm::terminal::size()?;
+        let (tem_w, tem_h) = terminal::size()?;
         let status = self.command_status_ctx.read().await.to_string();
         let lock_ref = Arc::clone(&self.stdout_lock);
         tokio::spawn(async move {
@@ -113,7 +113,7 @@ impl PrinterCtx {
     }
     async fn flush_screen_buffer(&self) -> anyhow::Result<()> {
         //得到终端尺寸
-        let (tem_w, tem_h) = crossterm::terminal::size()?;
+        let (tem_w, tem_h) = terminal::size()?;
         //缓冲区
         let mut screen_print_idx = tem_h as i32 - 3;
         let mut out_buf = Vec::with_capacity(screen_print_idx as usize);
