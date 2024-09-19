@@ -1,7 +1,9 @@
+use crate::config::buffer_size::SCREEN_BUFFER_SIZE;
 use crate::frontend::command::plainer::CommendPlainer;
 use crate::frontend::command::status::CommandStatusCtx;
 use crate::main_application::ApplicationLifetime;
 use crate::util::char::is_char_printable;
+use crate::util::log_fmt::LogFormatter;
 use crossterm::event::{Event, KeyCode, KeyEventKind, KeyModifiers};
 use crossterm::{cursor, execute, style, terminal};
 use std::collections::VecDeque;
@@ -9,8 +11,6 @@ use std::io;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tokio::sync::Semaphore;
-use crate::config::buffer_size::SCREEN_BUFFER_SIZE;
-use crate::util::log_fmt::LogFormatter;
 
 #[derive(Clone)]
 pub struct PrinterCtx {
@@ -69,10 +69,19 @@ impl PrinterCtx {
         //run command
         let that_app = app.clone();
         tokio::spawn(async move {
-            let exec_res = match CommendPlainer::load_app(that_app.clone()).exec_command(&command).await {
+            let exec_res = match CommendPlainer::load_app(that_app.clone())
+                .exec_command(&command)
+                .await
+            {
                 Ok(res) => res,
                 Err(e) => {
-                    let _ = that_app.printer.write_many(LogFormatter::error(&format!("Command Execution failed: {}", e))).await;
+                    let _ = that_app
+                        .printer
+                        .write_many(LogFormatter::error(&format!(
+                            "Command Execution failed: {}",
+                            e
+                        )))
+                        .await;
                     return;
                 }
             };

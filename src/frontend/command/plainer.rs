@@ -20,19 +20,29 @@ impl CommendPlainer {
         let sys_call = CommandParser::parse(command);
         match sys_call {
             SystemCall::Unknown => {
-                res.output.append(&mut LogFormatter::error("Unknown command"));
+                res.output
+                    .append(&mut LogFormatter::error("Unknown command"));
             }
             SystemCall::Exception(e) => {
-                res.output.append(&mut LogFormatter::error(&format!("Error on exec command:{}", e)));
+                res.output.append(&mut LogFormatter::error(&format!(
+                    "Error on exec command:{}",
+                    e
+                )));
             }
             SystemCall::ConnTcpSocket(addr) => {
                 if let Err(e) = call_conn(&self.app, addr).await {
-                    res.output.append(&mut LogFormatter::error(&format!("Error on Connect Tcp: {}", e)));
+                    res.output.append(&mut LogFormatter::error(&format!(
+                        "Error on Connect Tcp: {}",
+                        e
+                    )));
                 }
             }
             SystemCall::DisconnectTcpSocket(addr) => {
                 if let Err(e) = call_dis_conn(&self.app, addr).await {
-                    res.output.append(&mut LogFormatter::error(&format!("Error on Disconnect Tcp: {}", e)));
+                    res.output.append(&mut LogFormatter::error(&format!(
+                        "Error on Disconnect Tcp: {}",
+                        e
+                    )));
                 }
             }
         }

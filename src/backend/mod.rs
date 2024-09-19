@@ -1,2 +1,2 @@
-pub mod connect;
 pub(crate) mod chat;
+pub mod connect;
