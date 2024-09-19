@@ -9,6 +9,8 @@ use std::io;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tokio::sync::Semaphore;
+use crate::config::buffer_size::SCREEN_BUFFER_SIZE;
+use crate::util::log_fmt::LogFormatter;
 
 #[derive(Clone)]
 pub struct PrinterCtx {
@@ -21,10 +23,24 @@ impl PrinterCtx {
     pub fn new() -> PrinterCtx {
         PrinterCtx {
             write_buffer: Arc::new(RwLock::new(String::new())),
-            screen_buffer: Arc::new(RwLock::new(VecDeque::new())),
+            screen_buffer: Arc::new(RwLock::new(VecDeque::with_capacity(SCREEN_BUFFER_SIZE))),
             stdout_lock: Arc::new(Semaphore::new(1)),
             command_status_ctx: Arc::new(RwLock::new(CommandStatusCtx::new())),
         }
+    }
+    pub async fn write_many(&self, o: Vec<String>) -> anyhow::Result<()> {
+        let mut buf = self.screen_buffer.write().await;
+        for s in o {
+            buf.push_back(s);
+        }
+        drop(buf);
+        self.flush_screen_buffer().await?;
+        Ok(())
+    }
+    pub async fn write_output(&self, o: String) -> anyhow::Result<()> {
+        self.screen_buffer.write().await.push_back(o);
+        self.flush_screen_buffer().await?;
+        Ok(())
     }
     pub async fn flush_all(&self) -> anyhow::Result<()> {
         self.flush_screen_buffer().await?;
@@ -40,22 +56,36 @@ impl PrinterCtx {
         Ok(())
     }
     pub async fn user_conform(&self, app: &ApplicationLifetime) -> anyhow::Result<()> {
-        let mut status_ref = self.command_status_ctx.write().await;
+        //get command
         let mut user_input = self.write_buffer.write().await;
-        let exec_res = CommendPlainer::load_app(app.clone()).exec_command(&*user_input).await?;
-        status_ref.last_command = user_input.clone();
+        let command = user_input.clone();
         user_input.clear();
         drop(user_input);
-        let mut buf_writer = self.screen_buffer.write().await;
-        if exec_res.need_clear() {
-            buf_writer.clear();
-        }
-        for output in exec_res.output().into_iter() {
-            buf_writer.push_back(output);
-        }
-        drop(buf_writer);
+        let mut status_ref = self.command_status_ctx.write().await;
+        status_ref.last_command = command.clone();
+        status_ref.typed_command += 1;
         drop(status_ref);
         self.flush_all().await?;
+        //run command
+        let that_app = app.clone();
+        tokio::spawn(async move {
+            let exec_res = match CommendPlainer::load_app(that_app.clone()).exec_command(&command).await {
+                Ok(res) => res,
+                Err(e) => {
+                    let _ = that_app.printer.write_many(LogFormatter::error(&format!("Command Execution failed: {}", e))).await;
+                    return;
+                }
+            };
+            let mut buf_writer = that_app.printer.screen_buffer.write().await;
+            if exec_res.need_clear() {
+                buf_writer.clear();
+            }
+            for output in exec_res.output().into_iter() {
+                buf_writer.push_back(output);
+            }
+            drop(buf_writer);
+            let _ = that_app.printer.flush_all().await;
+        });
         Ok(())
     }
     pub async fn user_backspace(&self) -> anyhow::Result<()> {

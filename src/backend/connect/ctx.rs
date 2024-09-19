@@ -4,24 +4,28 @@ use std::str::FromStr;
 use std::sync::Arc;
 use tokio::net;
 use tokio::net::TcpStream;
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, RwLock};
 
 #[derive(Clone)]
 pub struct ConnCtx {
-    as_server: Arc<Mutex<HashMap<SocketAddr, TcpStream>>>,
-    as_client: Arc<Mutex<HashMap<SocketAddr, TcpStream>>>,
+    this: SocketAddr,
+    as_server: Arc<RwLock<HashMap<SocketAddr, TcpStream>>>,
+    as_client: Arc<RwLock<HashMap<SocketAddr, TcpStream>>>,
 }
 impl ConnCtx {
-    pub fn new() -> ConnCtx {
+    pub fn new(addr: SocketAddr) -> ConnCtx {
         ConnCtx {
-            as_server: Arc::new(Mutex::new(HashMap::new())),
-            as_client: Arc::new(Mutex::new(HashMap::new())),
+            as_server: Arc::new(RwLock::new(HashMap::new())),
+            as_client: Arc::new(RwLock::new(HashMap::new())),
+            this: addr,
         }
     }
-    pub async fn try_conn(&self, addr: &str) -> anyhow::Result<()> {
-        let remote = SocketAddr::from_str(addr)?;
-        let conn = net::TcpStream::connect(&remote).await?;
-        self.as_client.lock().await.insert(remote, conn);
+    pub async fn try_conn(&self, addr: SocketAddr) -> anyhow::Result<()> {
+        let conn = TcpStream::connect(addr).await?;
+        self.as_client.write().await.insert(addr, conn);
         Ok(())
+    }
+    pub fn addr(&self) -> SocketAddr {
+        self.this
     }
 }

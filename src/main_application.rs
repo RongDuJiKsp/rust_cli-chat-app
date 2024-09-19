@@ -5,6 +5,7 @@ use crate::frontend::view::event::{PrintEventHandler, PrinterChan};
 use crate::util::event_loop::AppEventLoopContext;
 use clap::Parser;
 use tokio::select;
+use crate::util::log_fmt::LogFormatter;
 
 #[derive(Parser)]
 struct ApplicationArgs {
@@ -42,12 +43,15 @@ impl MainApplication {
         PrintEventHandler::init_screen()?;
         let (printer_ctx, printer_chan) = PrintEventHandler::run_ctx()?;
         printer_ctx.flush_all().await?;
+        printer_ctx.write_many(LogFormatter::info("Screen Init")).await?;
         //init conn
         let (conn_ctx, conn_chan) =
             ConnectHandler::bind(&format!("0.0.0.0:{}", listener_port)).await?;
+        printer_ctx.write_many(LogFormatter::info(&format!("TCP Listener is  bind on {}", conn_ctx.addr()))).await?;
         //init loop_ctx
         let event_loop_ctx = AppEventLoopContext::init();
         //ok
+        printer_ctx.write_many(LogFormatter::info("Application Init Successful")).await?;
         let ctx = ApplicationLifetime {
             printer: printer_ctx,
             conn: conn_ctx,

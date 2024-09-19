@@ -11,6 +11,7 @@ pub struct ConnectHandler {}
 impl ConnectHandler {
     pub async fn bind(addr: &str) -> anyhow::Result<(ConnCtx, ConnChan)> {
         let listener = TcpListener::bind(addr).await?;
+        let addr = listener.local_addr()?;
         let (tx, rx) = sync::mpsc::channel(buffer_size::CONNECT_BUFFER_SIZE);
         tokio::spawn(async move {
             loop {
@@ -20,6 +21,6 @@ impl ConnectHandler {
                 }
             }
         });
-        Ok((ConnCtx::new(), rx))
+        Ok((ConnCtx::new(addr), rx))
     }
 }

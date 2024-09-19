@@ -1,3 +1,4 @@
+use crate::frontend::command::call_hd::{call_conn, call_dis_conn};
 use crate::frontend::command::parser::{CommandParser, SystemCall};
 use crate::main_application::ApplicationLifetime;
 use crate::util::log_fmt::LogFormatter;
@@ -20,6 +21,19 @@ impl CommendPlainer {
         match sys_call {
             SystemCall::Unknown => {
                 res.output.append(&mut LogFormatter::error("Unknown command"));
+            }
+            SystemCall::Exception(e) => {
+                res.output.append(&mut LogFormatter::error(&format!("Error on exec command:{}", e)));
+            }
+            SystemCall::ConnTcpSocket(addr) => {
+                if let Err(e) = call_conn(&self.app, addr).await {
+                    res.output.append(&mut LogFormatter::error(&format!("Error on Connect Tcp: {}", e)));
+                }
+            }
+            SystemCall::DisconnectTcpSocket(addr) => {
+                if let Err(e) = call_dis_conn(&self.app, addr).await {
+                    res.output.append(&mut LogFormatter::error(&format!("Error on Disconnect Tcp: {}", e)));
+                }
             }
         }
         Ok(res)
