@@ -9,14 +9,19 @@ use crossterm::{cursor, execute, style, terminal};
 use std::collections::VecDeque;
 use std::io;
 use std::sync::Arc;
-use tokio::sync::RwLock;
+use anyhow::anyhow;
+use tokio::sync::{Mutex, RwLock};
 use tokio::sync::Semaphore;
+use crate::config::style::CANT_PRINT_RANGE_HEIGHT;
+use crate::util::history_loader::HistoryLoader;
 
 #[derive(Clone)]
 pub struct PrinterCtx {
     write_buffer: Arc<RwLock<String>>,
     screen_buffer: Arc<RwLock<VecDeque<String>>>,
+    screen_view: Arc<RwLock<u16>>,
     command_status_ctx: Arc<RwLock<CommandStatusCtx>>,
+    command_history: Arc<Mutex<HistoryLoader<String>>>,
     stdout_lock: Arc<Semaphore>,
 }
 impl PrinterCtx {
@@ -24,8 +29,10 @@ impl PrinterCtx {
         PrinterCtx {
             write_buffer: Arc::new(RwLock::new(String::new())),
             screen_buffer: Arc::new(RwLock::new(VecDeque::with_capacity(SCREEN_BUFFER_SIZE))),
+            screen_view: Arc::new(RwLock::new(0)),
             stdout_lock: Arc::new(Semaphore::new(1)),
             command_status_ctx: Arc::new(RwLock::new(CommandStatusCtx::new())),
+            command_history: Arc::new(Mutex::new(HistoryLoader::new())),
         }
     }
     pub async fn write_many(&self, o: Vec<String>) -> anyhow::Result<()> {
@@ -103,6 +110,27 @@ impl PrinterCtx {
         self.flush_status().await?;
         Ok(())
     }
+    pub async fn user_view_offset_changed(&self, off: i16) -> anyhow::Result<()> {
+        let mut v = self.screen_view.write().await;
+        let rs = match off {
+            1 => {
+                *v += 1;
+                Ok(())
+            }
+            -1 => {
+                if *v > 0 {
+                    *v -= 1;
+                }
+                Ok(())
+            }
+            _ => Err(anyhow!("Why offset more than 1"))
+        };
+        drop(v);
+        if rs.is_ok() {
+            self.flush_screen_buffer().await?;
+        }
+        rs
+    }
     async fn flush_status(&self) -> anyhow::Result<()> {
         let (tem_w, tem_h) = terminal::size()?;
         let status = self.command_status_ctx.read().await.to_string();
@@ -153,42 +181,59 @@ impl PrinterCtx {
     async fn flush_screen_buffer(&self) -> anyhow::Result<()> {
         //得到终端尺寸
         let (tem_w, tem_h) = terminal::size()?;
+        //当终端尺寸大于CANT_PRINT_RANGE_HEIGHT时才需要打印
+        if tem_h <= CANT_PRINT_RANGE_HEIGHT {
+            return Ok(());
+        }
+        let can_print = tem_h - CANT_PRINT_RANGE_HEIGHT;
+        //得到视图偏移
+        let offset_view = *self.screen_view.read().await;
+        //计算需要打印的行数
+        let mut screen_print_need = (can_print + offset_view) as usize;
         //缓冲区
-        let mut screen_print_idx = tem_h as i32 - 3;
-        let mut out_buf = Vec::with_capacity(screen_print_idx as usize);
+        let mut out_buf = Vec::with_capacity(screen_print_need as usize);
         let screen_buf_ref = self.screen_buffer.clone();
         let lock_ref = Arc::clone(&self.stdout_lock);
+        let view_ref = Arc::clone(&self.screen_view);
         tokio::spawn(async move {
+            //统计是否将所有内容全部打印完成
+            let mut finished = true;
             //将缓存区内的字符串换行写入缓冲区
             let bufs = screen_buf_ref.read().await;
             for to_print in bufs.iter().rev() {
                 let chars = to_print.chars().collect::<Vec<char>>();
-                if screen_print_idx < 0 {
-                    break;
-                }
                 for chuck in chars.chunks(tem_w as usize).rev() {
-                    if screen_print_idx < 0 {
+                    //当打印满时时停止打印入缓冲区
+                    if screen_print_need == out_buf.len() {
+                        finished = false;
                         break;
                     }
                     out_buf.push(chuck.iter().collect::<String>());
-                    screen_print_idx -= 1;
                 }
             }
             drop(bufs);
-            //输出缓冲区
+            //输出缓冲区的最后 tem_h -CANT_PRINT_RANGE_HEIGHT 行
+            let total_cached_buf_size = out_buf.len();
+            // 偏移量计算：当打印的行数小于终端可打印区域高度时为0，否则为相减
+            let delta = if total_cached_buf_size as u16 >= can_print { total_cached_buf_size as u16 - can_print } else { 0 };
             let mut stdout = io::stdout();
-            {
-                let _permit = lock_ref
-                    .acquire()
-                    .await
-                    .expect("Couldn't acquire screen buffer");
-                execute!(stdout, cursor::SavePosition);
-                for (local, chuck) in out_buf.into_iter().rev().enumerate() {
-                    execute!(stdout, cursor::MoveTo(0, local as u16));
-                    execute!(stdout, terminal::Clear(terminal::ClearType::CurrentLine));
-                    execute!(stdout, style::Print(chuck));
-                }
-                execute!(stdout, cursor::RestorePosition);
+            let _permit = lock_ref
+                .acquire()
+                .await
+                .expect("Couldn't acquire screen buffer");
+            execute!(stdout, cursor::SavePosition);
+            for (local, chuck) in out_buf.into_iter().skip(delta as usize).rev().enumerate() {
+                execute!(stdout, cursor::MoveTo(0, local as u16));
+                execute!(stdout, terminal::Clear(terminal::ClearType::CurrentLine));
+                execute!(stdout, style::Print(chuck));
+            }
+            execute!(stdout, cursor::RestorePosition);
+            drop(stdout);
+            drop(_permit);
+            //根据打印结果更新偏移量
+            if finished {
+                //当内容全部打印完成时，偏移量为打印区域超过可打印区域的范围
+                *view_ref.write().await = delta;
             }
         });
 
@@ -223,6 +268,12 @@ pub async fn hd_terminal_event(
             }
             KeyCode::Backspace => {
                 ctx.user_backspace().await?;
+            }
+            KeyCode::Left => {
+                ctx.user_view_offset_changed(1).await?;
+            }
+            KeyCode::Right => {
+                ctx.user_view_offset_changed(-1).await?;
             }
             _ => {}
         }
