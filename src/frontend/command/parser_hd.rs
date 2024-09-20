@@ -28,7 +28,11 @@ impl ParserHandler {
         }
     }
     pub fn hd_unsafe_msgbox(mut args: SplitWhitespace) -> SystemCall {
-        let addr = match args.next().ok_or(anyhow::anyhow!("no addr given")).and_then(SocketAddr::from_str) {
+        let addr = match args
+            .next()
+            .ok_or(anyhow::anyhow!("no addr given"))
+            .and_then(SocketAddr::from_str)
+        {
             Ok(a) => a,
             Err(e) => return SystemCall::Exception(format!("error on addr: {}", e.to_string())),
         };

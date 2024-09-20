@@ -12,8 +12,14 @@ impl CmdCallHandler {
         ctx.conn.try_disconnect_server(addr).await?;
         Ok(())
     }
-    pub async fn call_unsafe_msgbox(ctx: Ctx<'_>, addr: SocketAddr, msg: String) -> anyhow::Result<()> {
-        ctx.conn.send_raw(addr, "msgbox".to_string(), Some(msg)).await?;
+    pub async fn call_unsafe_msgbox(
+        ctx: Ctx<'_>,
+        addr: SocketAddr,
+        msg: String,
+    ) -> anyhow::Result<()> {
+        ctx.conn
+            .send_raw(addr, "msgbox".to_string(), Some(msg))
+            .await?;
         Ok(())
     }
 }

@@ -25,7 +25,7 @@ impl<T: Clone> HistoryLoader<T> {
     }
     pub fn later(&mut self) -> Option<T> {
         let t = self.history_buffer.get(self.history_index).cloned();
-        if self.history_index +1< self.history_buffer.len() {
+        if self.history_index + 1 < self.history_buffer.len() {
             self.history_index += 1;
         }
         t

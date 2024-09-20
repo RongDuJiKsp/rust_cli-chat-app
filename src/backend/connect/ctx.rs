@@ -2,9 +2,7 @@ use crate::entity::alias::sync::{PtrFac, SharedRWPtr};
 use crate::entity::dto::base_body::BaseSocketMessageBody;
 use std::collections::HashMap;
 use std::net::SocketAddr;
-use std::sync::Arc;
 use tokio::net::TcpStream;
-use tokio::sync::RwLock;
 
 pub type LockedTcpStream = SharedRWPtr<TcpStream>;
 pub type AddrStreamMapping = SharedRWPtr<HashMap<SocketAddr, LockedTcpStream>>;
@@ -23,19 +21,37 @@ impl ConnCtx {
         }
     }
     pub async fn add_client(&self, addr: SocketAddr, stream: TcpStream) {
-        self.as_server.write().await.insert(addr, PtrFac::shared_rw_ptr(stream));
+        self.as_server
+            .write()
+            .await
+            .insert(addr, PtrFac::shared_rw_ptr(stream));
     }
     pub async fn try_conn(&self, addr: SocketAddr) -> anyhow::Result<()> {
         let conn = TcpStream::connect(addr).await?;
-        self.as_client.write().await.insert(addr, PtrFac::shared_rw_ptr(conn));
+        self.as_client
+            .write()
+            .await
+            .insert(addr, PtrFac::shared_rw_ptr(conn));
         Ok(())
     }
     pub async fn try_disconnect_server(&self, addr: SocketAddr) -> anyhow::Result<()> {
-        self.as_client.write().await.remove(&addr).ok_or(anyhow::anyhow!("不存在的远端主机！"))?;
+        self.as_client
+            .write()
+            .await
+            .remove(&addr)
+            .ok_or(anyhow::anyhow!("不存在的远端主机！"))?;
         Ok(())
     }
-    pub async fn send_raw(&self, addr: SocketAddr, end_point: String, raw: Option<String>) -> anyhow::Result<()> {
-        let io = self.addr_stream(addr).await.ok_or(anyhow::anyhow!("No Conn on {}", addr))?;
+    pub async fn send_raw(
+        &self,
+        addr: SocketAddr,
+        end_point: String,
+        raw: Option<String>,
+    ) -> anyhow::Result<()> {
+        let io = self
+            .addr_stream(addr)
+            .await
+            .ok_or(anyhow::anyhow!("No Conn on {}", addr))?;
         BaseSocketMessageBody::make_raw(end_point, raw).write_to(&*io.write().await)?;
         Ok(())
     }
@@ -50,8 +66,8 @@ impl ConnCtx {
             Some(s) => Some(s),
             None => match self.server_stream(addr).await {
                 None => None,
-                Some(s) => Some(s)
-            }
+                Some(s) => Some(s),
+            },
         }
     }
     pub fn addr(&self) -> SocketAddr {

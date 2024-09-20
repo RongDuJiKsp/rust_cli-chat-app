@@ -34,7 +34,7 @@ impl BaseSocketMessageBody {
                     let res = serde_json::from_slice::<I>(&bin)?;
                     Ok(Some(res))
                 }
-                _ => { Err(anyhow::anyhow!("Raw Data Can't be trans")) }
+                _ => Err(anyhow::anyhow!("Raw Data Can't be trans")),
             },
             None => Ok(None),
         }
@@ -42,7 +42,7 @@ impl BaseSocketMessageBody {
     pub fn be_raw(self) -> String {
         self.body.unwrap_or_else(String::new)
     }
-    pub fn write_to<T: Write>(&self,& mut stream: T) -> anyhow::Result<()> {
+    pub fn write_to<T: Write>(&self, &mut stream: T) -> anyhow::Result<()> {
         let json = serde_json::to_string(&self)?.add("\n");
         stream.write_all(json.as_bytes())?;
         stream.flush()?;

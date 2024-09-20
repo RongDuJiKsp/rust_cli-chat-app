@@ -123,7 +123,7 @@ impl PrinterCtx {
                 }
                 Ok(())
             }
-            _ => Err(anyhow!("Why offset more than 1"))
+            _ => Err(anyhow!("Why offset more than 1")),
         };
         drop(v);
         if rs.is_ok() {
@@ -215,7 +215,11 @@ impl PrinterCtx {
             //输出缓冲区的最后 tem_h -CANT_PRINT_RANGE_HEIGHT 行
             let total_cached_buf_size = out_buf.len();
             // 偏移量计算：当打印的行数小于终端可打印区域高度时为0，否则为相减
-            let delta = if total_cached_buf_size as u16 >= can_print { total_cached_buf_size as u16 - can_print } else { 0 };
+            let delta = if total_cached_buf_size as u16 >= can_print {
+                total_cached_buf_size as u16 - can_print
+            } else {
+                0
+            };
             let mut stdout = io::stdout();
             let _permit = lock_ref
                 .acquire()
