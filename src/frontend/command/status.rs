@@ -1,20 +1,20 @@
 use std::fmt::Display;
 
-pub struct CommandStatusCtx {
+pub struct CommandStatus {
     pub typed_command: u32,
     pub typed_alpha: u32,
     pub last_command: String,
 }
-impl CommandStatusCtx {
-    pub fn new() -> CommandStatusCtx {
-        CommandStatusCtx {
+impl CommandStatus {
+    pub fn new() -> CommandStatus {
+        CommandStatus {
             typed_command: 0,
             typed_alpha: 0,
             last_command: String::new(),
         }
     }
 }
-impl Display for CommandStatusCtx {
+impl Display for CommandStatus {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,

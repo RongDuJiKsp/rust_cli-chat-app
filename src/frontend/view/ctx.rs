@@ -1,7 +1,8 @@
 use crate::config::buffer_size::SCREEN_BUFFER_SIZE;
 use crate::config::style::CANT_PRINT_RANGE_HEIGHT;
+use crate::entity::alias::sync::{PtrFac, SharedPtr, SharedRWPtr};
 use crate::frontend::command::plainer::CommendPlainer;
-use crate::frontend::command::status::CommandStatusCtx;
+use crate::frontend::command::status::CommandStatus;
 use crate::main_application::ApplicationLifetime;
 use crate::util::char::is_char_printable;
 use crate::util::history_loader::HistoryLoader;
@@ -13,26 +14,25 @@ use std::collections::VecDeque;
 use std::io;
 use std::sync::Arc;
 use tokio::sync::Semaphore;
-use tokio::sync::{Mutex, RwLock};
 
 #[derive(Clone)]
 pub struct PrinterCtx {
-    write_buffer: Arc<RwLock<String>>,
-    screen_buffer: Arc<RwLock<VecDeque<String>>>,
-    screen_view: Arc<RwLock<u16>>,
-    command_status_ctx: Arc<RwLock<CommandStatusCtx>>,
-    command_history: Arc<Mutex<HistoryLoader<String>>>,
+    write_buffer: SharedRWPtr<String>,
+    screen_buffer: SharedRWPtr<VecDeque<String>>,
+    screen_view: SharedRWPtr<u16>,
+    command_status_ctx: SharedRWPtr<CommandStatus>,
+    command_history: SharedPtr<HistoryLoader<String>>,
     stdout_lock: Arc<Semaphore>,
 }
 impl PrinterCtx {
     pub fn new() -> PrinterCtx {
         PrinterCtx {
-            write_buffer: Arc::new(RwLock::new(String::new())),
-            screen_buffer: Arc::new(RwLock::new(VecDeque::with_capacity(SCREEN_BUFFER_SIZE))),
-            screen_view: Arc::new(RwLock::new(0)),
+            write_buffer: PtrFac::shared_rw_ptr(String::new()),
+            screen_buffer: PtrFac::shared_rw_ptr(VecDeque::with_capacity(SCREEN_BUFFER_SIZE)),
+            screen_view: PtrFac::shared_rw_ptr(0u16),
+            command_status_ctx: PtrFac::shared_rw_ptr(CommandStatus::new()),
+            command_history: PtrFac::shared_ptr(HistoryLoader::new()),
             stdout_lock: Arc::new(Semaphore::new(1)),
-            command_status_ctx: Arc::new(RwLock::new(CommandStatusCtx::new())),
-            command_history: Arc::new(Mutex::new(HistoryLoader::new())),
         }
     }
     pub async fn write_many(&self, o: Vec<String>) -> anyhow::Result<()> {

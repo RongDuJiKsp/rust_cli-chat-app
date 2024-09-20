@@ -13,7 +13,7 @@ pub enum SystemCall {
     Unknown,
 }
 
-pub struct CommandParser {}
+pub struct CommandParser;
 impl CommandParser {
     pub fn parse(command: &str) -> SystemCall {
         let mut cmd_words = command.split_whitespace();

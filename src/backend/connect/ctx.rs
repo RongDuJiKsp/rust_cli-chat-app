@@ -1,4 +1,4 @@
-use crate::entity::alias::sync::SharePtrFactory;
+use crate::entity::alias::sync::{PtrFac, SharedRWPtr};
 use crate::entity::dto::base_body::BaseSocketMessageBody;
 use std::collections::HashMap;
 use std::net::SocketAddr;
@@ -6,8 +6,8 @@ use std::sync::Arc;
 use tokio::net::TcpStream;
 use tokio::sync::RwLock;
 
-pub type LockedTcpStream = Arc<RwLock<TcpStream>>;
-pub type AddrStreamMapping = Arc<RwLock<HashMap<SocketAddr, LockedTcpStream>>>;
+pub type LockedTcpStream = SharedRWPtr<TcpStream>;
+pub type AddrStreamMapping = SharedRWPtr<HashMap<SocketAddr, LockedTcpStream>>;
 #[derive(Clone)]
 pub struct ConnCtx {
     this: SocketAddr,
@@ -17,14 +17,17 @@ pub struct ConnCtx {
 impl ConnCtx {
     pub fn new(addr: SocketAddr) -> ConnCtx {
         ConnCtx {
-            as_server: SharePtrFactory::new_shared_rw_ptr(HashMap::new()),
-            as_client: SharePtrFactory::new_shared_rw_ptr(HashMap::new()),
+            as_server: PtrFac::shared_rw_ptr(HashMap::new()),
+            as_client: PtrFac::shared_rw_ptr(HashMap::new()),
             this: addr,
         }
     }
+    pub async fn add_client(&self, addr: SocketAddr, stream: TcpStream) {
+        self.as_server.write().await.insert(addr, PtrFac::shared_rw_ptr(stream));
+    }
     pub async fn try_conn(&self, addr: SocketAddr) -> anyhow::Result<()> {
         let conn = TcpStream::connect(addr).await?;
-        self.as_client.write().await.insert(addr, SharePtrFactory::new_shared_rw_ptr(conn));
+        self.as_client.write().await.insert(addr, PtrFac::shared_rw_ptr(conn));
         Ok(())
     }
     pub async fn try_disconnect_server(&self, addr: SocketAddr) -> anyhow::Result<()> {
@@ -51,7 +54,6 @@ impl ConnCtx {
             }
         }
     }
-
     pub fn addr(&self) -> SocketAddr {
         self.this
     }
