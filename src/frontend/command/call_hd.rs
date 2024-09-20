@@ -13,6 +13,7 @@ impl CmdCallHandler {
         Ok(())
     }
     pub async fn call_unsafe_msgbox(ctx: Ctx<'_>, addr: SocketAddr, msg: String) -> anyhow::Result<()> {
-        
+        ctx.conn.send_raw(addr, "msgbox".to_string(), Some(msg)).await?;
+        Ok(())
     }
 }
