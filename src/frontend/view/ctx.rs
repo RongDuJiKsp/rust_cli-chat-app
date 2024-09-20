@@ -1,19 +1,19 @@
 use crate::config::buffer_size::SCREEN_BUFFER_SIZE;
+use crate::config::style::CANT_PRINT_RANGE_HEIGHT;
 use crate::frontend::command::plainer::CommendPlainer;
 use crate::frontend::command::status::CommandStatusCtx;
 use crate::main_application::ApplicationLifetime;
 use crate::util::char::is_char_printable;
+use crate::util::history_loader::HistoryLoader;
 use crate::util::log_fmt::LogFormatter;
+use anyhow::anyhow;
 use crossterm::event::{Event, KeyCode, KeyEventKind, KeyModifiers};
 use crossterm::{cursor, execute, style, terminal};
 use std::collections::VecDeque;
 use std::io;
 use std::sync::Arc;
-use anyhow::anyhow;
-use tokio::sync::{Mutex, RwLock};
 use tokio::sync::Semaphore;
-use crate::config::style::CANT_PRINT_RANGE_HEIGHT;
-use crate::util::history_loader::HistoryLoader;
+use tokio::sync::{Mutex, RwLock};
 
 #[derive(Clone)]
 pub struct PrinterCtx {

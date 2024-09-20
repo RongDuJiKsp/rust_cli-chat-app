@@ -1,5 +1,5 @@
-use std::collections::VecDeque;
 use crate::config::buffer_size::COMMAND_HISTORY_BUFFER_SIZE;
+use std::collections::VecDeque;
 
 pub struct HistoryLoader<T: Clone> {
     history_buffer: VecDeque<T>,

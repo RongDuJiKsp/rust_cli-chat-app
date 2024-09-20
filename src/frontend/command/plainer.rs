@@ -1,4 +1,4 @@
-use crate::frontend::command::call_hd::{call_conn, call_dis_conn};
+use crate::frontend::command::call_hd::CmdCallHandler;
 use crate::frontend::command::parser::{CommandParser, SystemCall};
 use crate::main_application::ApplicationLifetime;
 use crate::util::log_fmt::LogFormatter;
@@ -24,26 +24,29 @@ impl CommendPlainer {
                     .append(&mut LogFormatter::error("Unknown command"));
             }
             SystemCall::Exception(e) => {
-                res.output.append(&mut LogFormatter::error(&format!(
-                    "Error on exec command:{}",
-                    e
-                )));
+                res.output.append(&mut LogFormatter::error(&format!("Error on exec command:{}", e)));
             }
             SystemCall::ConnTcpSocket(addr) => {
-                if let Err(e) = call_conn(&self.app, addr).await {
-                    res.output.append(&mut LogFormatter::error(&format!(
-                        "Error on Connect Tcp: {}",
-                        e
-                    )));
-                }
+                let mut log = match CmdCallHandler::call_conn(&self.app, addr).await {
+                    Ok(_) => LogFormatter::info(&format!("Connection successful to {}", addr)),
+                    Err(e) => LogFormatter::error(&format!("Error on Connect Tcp: {}", e))
+                };
+                res.output.append(&mut log);
             }
             SystemCall::DisconnectTcpSocket(addr) => {
-                if let Err(e) = call_dis_conn(&self.app, addr).await {
-                    res.output.append(&mut LogFormatter::error(&format!(
-                        "Error on Disconnect Tcp: {}",
-                        e
-                    )));
-                }
+                let mut log = match CmdCallHandler::call_dis_conn(&self.app, addr).await {
+                    Ok(_) => LogFormatter::info("已主动断开连接，将在结束使用后结束连接"),
+                    Err(e) => LogFormatter::error(&format!("Error on Disconnect Tcp: {}", e))
+                };
+                res.output.append(&mut log);
+            }
+            SystemCall::UnsafeMsgbox(addr,msg)=>{
+                let mut log = match CmdCallHandler::call_unsafe_msgbox(&self.app, addr,msg).await {
+                    Ok(_) => LogFormatter::info("消息发送成功"),
+                    Err(e) => LogFormatter::error(&format!("Error on Send msgbox：{}", e))
+                };
+                res.output.append(&mut log);
+
             }
         }
         Ok(res)
