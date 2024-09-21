@@ -5,7 +5,7 @@ use tokio::net::{TcpListener, TcpStream};
 use tokio::sync;
 use tokio::sync::mpsc::Receiver;
 
-type ConnPointHd = (TcpStream, SocketAddr);
+pub(crate) type ConnPointHd = (TcpStream, SocketAddr);
 pub type ConnChan = Receiver<ConnPointHd>;
 pub struct ConnectHandler {}
 impl ConnectHandler {

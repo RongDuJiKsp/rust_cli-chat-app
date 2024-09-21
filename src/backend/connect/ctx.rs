@@ -3,6 +3,8 @@ use crate::entity::dto::base_body::BaseSocketMessageBody;
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use tokio::net::TcpStream;
+use crate::backend::connect::event::ConnPointHd;
+use crate::main_application::ApplicationLifetime;
 
 pub type LockedTcpStream = SharedRWPtr<TcpStream>;
 pub type AddrStreamMapping = SharedRWPtr<HashMap<SocketAddr, LockedTcpStream>>;
@@ -73,4 +75,8 @@ impl ConnCtx {
     pub fn addr(&self) -> SocketAddr {
         self.this
     }
+}
+pub async fn hd_conn_event(app: &ApplicationLifetime, hd: ConnPointHd) -> anyhow::Result<()> {
+    app.conn.add_client(hd.1, hd.0).await;
+    Ok(())
 }

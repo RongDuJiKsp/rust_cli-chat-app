@@ -246,7 +246,7 @@ impl PrinterCtx {
 }
 pub async fn hd_terminal_event(
     application: &mut ApplicationLifetime,
-    screen_event: &Event,
+    screen_event: Event,
 ) -> anyhow::Result<()> {
     let mut ctx = &application.printer;
     let mut app = &application.event_loop;

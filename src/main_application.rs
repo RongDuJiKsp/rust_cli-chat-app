@@ -1,4 +1,4 @@
-use crate::backend::connect::ctx::ConnCtx;
+use crate::backend::connect::ctx::{hd_conn_event, ConnCtx};
 use crate::backend::connect::event::{ConnChan, ConnectHandler};
 use crate::frontend::view::ctx::{hd_terminal_event, PrinterCtx};
 use crate::frontend::view::event::{PrintEventHandler, PrinterChan};
@@ -84,9 +84,11 @@ impl MainApplication {
         while *self.ctx.event_loop.event_looping.read().await {
             select! {
                 Some(screen_event) = self.channel_unions.printer.recv() => {
-                    hd_terminal_event(&mut self.ctx,&screen_event).await?;
+                    hd_terminal_event(&mut self.ctx,screen_event).await?;
                 }
-                Some(conn_event) = self.channel_unions.conn.recv() => {}
+                Some(conn_event) = self.channel_unions.conn.recv() => {
+                    hd_conn_event(&mut self.ctx,conn_event).await?
+                }
             }
         }
         Ok(())
