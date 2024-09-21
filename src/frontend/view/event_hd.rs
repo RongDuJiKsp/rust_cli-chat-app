@@ -37,6 +37,12 @@ pub async fn hd_terminal_event(
             KeyCode::Right => {
                 ctx.user_view_offset_changed(-1).await?;
             }
+            KeyCode::Up => {
+                ctx.user_cmd_history(1).await?;
+            }
+            KeyCode::Down => {
+                ctx.user_cmd_history(-1).await?;
+            }
             _ => {}
         }
     }

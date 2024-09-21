@@ -60,6 +60,22 @@ impl PrinterCtx {
         self.flush_status().await?;
         Ok(())
     }
+    pub async fn user_cmd_history(&self, off: i8) -> anyhow::Result<()> {
+        let his_cmd = match off {
+            1 => match self.command_history.lock().await.easily() {
+                None => { return Ok(()) }
+                Some(cmd) => cmd
+            },
+            -1 => match self.command_history.lock().await.later() {
+                None => { return Ok(()) }
+                Some(cmd) => cmd
+            },
+            _ => { return Err(anyhow::anyhow!("Op must be 1 or -1")) }
+        };
+        *self.write_buffer.write().await = his_cmd;
+        self.flush_input().await?;
+        Ok(())
+    }
     pub async fn user_conform(&self, app: &ApplicationLifetime) -> anyhow::Result<()> {
         //get command
         let mut user_input = self.write_buffer.write().await;
@@ -70,6 +86,7 @@ impl PrinterCtx {
         status_ref.last_command = command.clone();
         status_ref.typed_command += 1;
         drop(status_ref);
+        self.command_history.lock().await.add(command.clone());
         self.flush_all().await?;
         //run command
         let that_app = app.clone();
