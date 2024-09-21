@@ -9,7 +9,6 @@ pub async fn hd_conn_event(app: &ApplicationLifetime, hd: ConnPointHd) -> anyhow
     Ok(())
 }
 pub async fn hd_message_event(app: &ApplicationLifetime, msg: FrameBody) -> anyhow::Result<()> {
-    println!("{:?}", msg);
     let endpoint = msg.frame.end_point.clone();
     match endpoint.as_str() {
         "msgbox" => {
@@ -27,7 +26,7 @@ async fn hd_ep_msgbox(
 ) -> anyhow::Result<()> {
     app.printer
         .write_many(LogFormatter::info(&format!(
-            "A msgbox from {} is :\n{}",
+            "A msgbox from {} is : {}",
             addr, raw
         )))
         .await?;
