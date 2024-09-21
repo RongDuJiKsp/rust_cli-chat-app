@@ -1,11 +1,11 @@
 use crate::config::buffer_size::{CONNECT_BUFFER_SIZE, READER_BUFFER_SIZE, READER_TIME_SIZE};
+use crate::config::message::MESSAGE_SPLITTER;
 use crate::entity::dto::base_body::BaseSocketMessageBody;
 use std::net::SocketAddr;
 use tokio::io::AsyncReadExt;
 use tokio::net::tcp::OwnedReadHalf;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
-use crate::config::message::MESSAGE_SPLITTER;
 
 #[derive(Debug)]
 pub struct FrameBody {
