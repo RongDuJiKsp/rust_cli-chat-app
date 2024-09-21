@@ -1,7 +1,10 @@
-use crate::backend::connect::ctx::{hd_conn_event, ConnCtx};
+use crate::backend::connect::ctx::ConnCtx;
 use crate::backend::connect::event::{ConnChan, ConnectHandler};
-use crate::frontend::view::ctx::{hd_terminal_event, PrinterCtx};
+use crate::backend::connect::event_hd::{hd_conn_event, hd_message_event};
+use crate::backend::connect::resp_frame_reader::FrameChan;
+use crate::frontend::view::ctx::PrinterCtx;
 use crate::frontend::view::event::{PrintEventHandler, PrinterChan};
+use crate::frontend::view::event_hd::hd_terminal_event;
 use crate::util::event_loop::AppEventLoopContext;
 use crate::util::log_fmt::LogFormatter;
 use clap::Parser;
@@ -27,6 +30,7 @@ pub struct ApplicationLifetime {
 pub struct ChannelUnions {
     printer: PrinterChan,
     conn: ConnChan,
+    frame: FrameChan,
 }
 pub struct MainApplication {
     args: ApplicationArgs,
@@ -47,7 +51,7 @@ impl MainApplication {
             .write_many(LogFormatter::info("Screen Init"))
             .await?;
         //init conn
-        let (conn_ctx, conn_chan) =
+        let (conn_ctx, conn_chan, frame_chan) =
             ConnectHandler::bind(&format!("0.0.0.0:{}", listener_port)).await?;
         printer_ctx
             .write_many(LogFormatter::info(&format!(
@@ -69,6 +73,7 @@ impl MainApplication {
         let channel_unions = ChannelUnions {
             printer: printer_chan,
             conn: conn_chan,
+            frame: frame_chan,
         };
         Ok(MainApplication {
             args,
@@ -88,6 +93,9 @@ impl MainApplication {
                 }
                 Some(conn_event) = self.channel_unions.conn.recv() => {
                     hd_conn_event(&mut self.ctx,conn_event).await?
+                }
+                Some(fram_event)=self.channel_unions.frame.recv()=>{
+                    hd_message_event(&mut self.ctx,fram_event).await?;
                 }
             }
         }

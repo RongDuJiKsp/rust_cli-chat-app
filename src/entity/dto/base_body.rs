@@ -1,8 +1,8 @@
 use base64::Engine;
 use serde::{Deserialize, Serialize};
 use std::cmp::PartialEq;
-use std::io::Write;
 use std::ops::Add;
+use tokio::io::{AsyncWrite, AsyncWriteExt};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub enum SocketBodyType {
@@ -42,16 +42,16 @@ impl BaseSocketMessageBody {
     pub fn be_raw(self) -> String {
         self.body.unwrap_or_else(String::new)
     }
-    pub fn write_to<T: Write>(&self, &mut stream: T) -> anyhow::Result<()> {
+    pub async fn write_to<T: AsyncWrite + Unpin>(&self, mut stream: &mut T) -> anyhow::Result<()> {
         let json = serde_json::to_string(&self)?.add("\n");
-        stream.write_all(json.as_bytes())?;
-        stream.flush()?;
+        stream.write_all(json.as_bytes()).await?;
+        stream.flush().await?;
         Ok(())
     }
     pub fn try_make_serializable<T: Serialize>(end_point: String, data: T) -> anyhow::Result<Self> {
         Ok(Self {
             end_point,
-            body: Some(serde_json::to_string(data)?),
+            body: Some(serde_json::to_string(&data)?),
             content_type: SocketBodyType::Json,
         })
     }
@@ -69,5 +69,8 @@ impl BaseSocketMessageBody {
             body: raw,
             content_type: SocketBodyType::Raw,
         }
+    }
+    pub fn unmarshal(d: &[u8]) -> anyhow::Result<Self> {
+        Ok(serde_json::from_slice::<Self>(d)?)
     }
 }

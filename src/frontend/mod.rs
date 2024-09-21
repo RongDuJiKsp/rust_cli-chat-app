@@ -1,2 +1,2 @@
-mod command;
+pub mod command;
 pub mod view;

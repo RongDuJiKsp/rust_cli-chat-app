@@ -31,8 +31,10 @@ impl ParserHandler {
         let addr = match args
             .next()
             .ok_or(anyhow::anyhow!("no addr given"))
-            .and_then(SocketAddr::from_str)
-        {
+            .and_then(|e| match SocketAddr::from_str(e) {
+                Ok(e) => Ok(e),
+                Err(e) => Err(anyhow::anyhow!("{}", e)),
+            }) {
             Ok(a) => a,
             Err(e) => return SystemCall::Exception(format!("error on addr: {}", e.to_string())),
         };
