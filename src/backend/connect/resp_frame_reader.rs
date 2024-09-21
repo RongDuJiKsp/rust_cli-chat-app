@@ -5,7 +5,9 @@ use tokio::io::AsyncReadExt;
 use tokio::net::tcp::OwnedReadHalf;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
+use crate::config::message::MESSAGE_SPLITTER;
 
+#[derive(Debug)]
 pub struct FrameBody {
     pub frame: BaseSocketMessageBody,
     pub addr: SocketAddr,
@@ -41,8 +43,8 @@ impl FrameReaderManager {
                 if read_size == 0 {
                     break;
                 }
-                for bytes in &buffer[0..read_size] {
-                    if *bytes == b'\n' {
+                for bytes in buffer[0..read_size].iter().cloned().collect::<Vec<_>>() {
+                    if bytes == MESSAGE_SPLITTER {
                         let body = match BaseSocketMessageBody::unmarshal(&un_hd_buf) {
                             Ok(b) => b,
                             Err(_) => {
@@ -50,9 +52,9 @@ impl FrameReaderManager {
                             }
                         };
                         un_hd_buf.clear();
-                        let _ = rf.send(FrameBody::new(body, addr));
+                        let _ = rf.send(FrameBody::new(body, addr)).await.is_ok();
                     } else {
-                        un_hd_buf.push(*bytes);
+                        un_hd_buf.push(bytes);
                     }
                 }
             }

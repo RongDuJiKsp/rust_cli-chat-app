@@ -9,6 +9,7 @@ pub async fn hd_conn_event(app: &ApplicationLifetime, hd: ConnPointHd) -> anyhow
     Ok(())
 }
 pub async fn hd_message_event(app: &ApplicationLifetime, msg: FrameBody) -> anyhow::Result<()> {
+    println!("{:?}", msg);
     let endpoint = msg.frame.end_point.clone();
     match endpoint.as_str() {
         "msgbox" => {
