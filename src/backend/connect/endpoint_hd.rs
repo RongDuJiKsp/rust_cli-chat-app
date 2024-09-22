@@ -17,9 +17,12 @@ pub async fn hd_ep_msgbox(
     Ok(())
 }
 pub async fn hd_ep_chat(app: &ApplicationLifetime, raw: String) -> anyhow::Result<()> {
+    let transited = BaseChatMessageBody::from_json(&raw)?;
     app.chat
-        .new_msg(BaseChatMessageBody::from_json(&raw)?)
+        .new_msg(transited.clone())
         .await?;
-    app.chat.print_to(&app.printer).await?;
+    if app.chat.is_chatting_with(&transited.me) {
+        app.chat.print_to(&app.printer).await?;
+    }
     Ok(())
 }

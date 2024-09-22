@@ -5,7 +5,6 @@ use crate::frontend::view::ctx::PrinterCtx;
 use anyhow::bail;
 use std::collections::HashMap;
 use std::net::SocketAddr;
-
 #[derive(Clone)]
 pub struct ChatCtx {
     chatting: SharedPtr<Option<SocketAddr>>,
@@ -84,7 +83,12 @@ impl ChatCtx {
             .push(format!("[To You] {}", msg.msg.clone()));
         Ok(())
     }
-
+    pub async fn is_chatting_with(&self, addr: &SocketAddr) -> bool {
+        match &*self.chatting.lock().await {
+            Some(e) => *addr == *e,
+            None => false,
+        }
+    }
     async fn init_chat(&self, addr: &SocketAddr) {
         let mut body = Vec::new();
         body.push(format!("--------Chat between {} ----", addr));
