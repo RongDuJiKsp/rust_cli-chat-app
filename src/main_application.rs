@@ -15,8 +15,8 @@ use tokio::select;
 struct ApplicationArgs {
     #[clap(short = 'p', long = "port")]
     port: Option<u16>,
-    #[clap(short = 'b', long = "bind_ip")]
-    bind_ip: Option<String>,
+    #[clap(short = 'b', long = "bind_ip", default_value = "127.0.0.1")]
+    bind_ip: String,
     #[clap(short = 'n', long = "nick")]
     nick: Option<String>,
     #[clap(short = 'f', long = "channel_size", default_value = "1024")]
@@ -45,6 +45,7 @@ impl MainApplication {
         //read args
         let args = ApplicationArgs::parse();
         let listener_port = args.port.unwrap_or_else(|| 0);
+        let ip = args.bind_ip.clone();
         //init printer
         PrintEventHandler::init_screen()?;
         let (printer_ctx, printer_chan) = PrintEventHandler::run_ctx()?;
@@ -54,7 +55,7 @@ impl MainApplication {
             .await?;
         //init conn
         let (conn_ctx, conn_chan, frame_chan) =
-            ConnectHandler::bind(&format!("0.0.0.0:{}", listener_port)).await?;
+            ConnectHandler::bind(&format!("{}:{}", ip, listener_port)).await?;
         printer_ctx
             .write_many(LogFormatter::info(&format!(
                 "TCP Listener is  bind on {}",
