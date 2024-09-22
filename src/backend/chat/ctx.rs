@@ -1,10 +1,10 @@
+use crate::backend::chat::body::BaseChatMessageBody;
 use crate::backend::connect::ctx::ConnCtx;
 use crate::entity::alias::sync::{PtrFac, SharedPtr, SharedRWPtr};
+use crate::frontend::view::ctx::PrinterCtx;
+use anyhow::bail;
 use std::collections::HashMap;
 use std::net::SocketAddr;
-use anyhow::bail;
-use crate::backend::chat::body::BaseChatMessageBody;
-use crate::frontend::view::ctx::PrinterCtx;
 
 #[derive(Clone)]
 pub struct ChatCtx {
@@ -32,11 +32,25 @@ impl ChatCtx {
     pub async fn print_to(&self, ctx: &PrinterCtx) -> anyhow::Result<()> {
         let chatting = self.chatting.lock().await;
         let tg = match *chatting {
-            None => { bail!("No Chatting") }
-            Some(e) => e
+            None => {
+                bail!("No Chatting")
+            }
+            Some(e) => e,
         };
-        let output = self.history_char.read().await.get(&tg).ok_or(anyhow::anyhow!("No init chat"))?.read().await.clone();
-        ctx.write_with_task().with_many(output).with_cls().run().await;
+        let output = self
+            .history_char
+            .read()
+            .await
+            .get(&tg)
+            .ok_or(anyhow::anyhow!("No init chat"))?
+            .read()
+            .await
+            .clone();
+        ctx.write_with_task()
+            .with_many(output)
+            .with_cls()
+            .run()
+            .await;
         ctx.flush_all().await?;
         Ok(())
     }
@@ -77,7 +91,18 @@ impl ChatCtx {
             .insert(addr.clone(), PtrFac::shared_rw_ptr(body));
     }
     async fn send(conn: &ConnCtx, addr: &SocketAddr, msg: String) -> anyhow::Result<()> {
-        conn.send_raw(addr.clone(), "chat".to_string(), Some(BaseChatMessageBody { msg, me: conn.addr() }.to_json()?)).await?;
+        conn.send_raw(
+            addr.clone(),
+            "chat".to_string(),
+            Some(
+                BaseChatMessageBody {
+                    msg,
+                    me: conn.addr(),
+                }
+                .to_json()?,
+            ),
+        )
+        .await?;
         Ok(())
     }
 }

@@ -1,7 +1,7 @@
+use crate::backend::chat::body::BaseChatMessageBody;
 use crate::main_application::ApplicationLifetime;
 use crate::util::log_fmt::LogFormatter;
 use std::net::SocketAddr;
-use crate::backend::chat::body::BaseChatMessageBody;
 
 pub async fn hd_ep_msgbox(
     app: &ApplicationLifetime,
@@ -16,11 +16,10 @@ pub async fn hd_ep_msgbox(
         .await?;
     Ok(())
 }
-pub async fn hd_ep_chat(
-    app: &ApplicationLifetime,
-    raw: String,
-) -> anyhow::Result<()> {
-    app.chat.new_msg(BaseChatMessageBody ::from_json(&raw)?).await?;
+pub async fn hd_ep_chat(app: &ApplicationLifetime, raw: String) -> anyhow::Result<()> {
+    app.chat
+        .new_msg(BaseChatMessageBody::from_json(&raw)?)
+        .await?;
     app.chat.print_to(&app.printer).await?;
     Ok(())
 }

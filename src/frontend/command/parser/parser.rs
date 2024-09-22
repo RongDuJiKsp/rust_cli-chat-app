@@ -24,7 +24,7 @@ impl SystemCall {
             "cw!" => ParserHandler::hd_chat_with(cmd_words),
             "chatwith" => ParserHandler::hd_chat_with(cmd_words),
             "chat!" => ParserHandler::hd_chat_send_msg(cmd_words),
-            "chatmsg"=>ParserHandler::hd_chat_send_msg(cmd_words),
+            "chatmsg" => ParserHandler::hd_chat_send_msg(cmd_words),
             _ => SystemCall::Unknown,
         }
     }

@@ -1,11 +1,9 @@
+use crate::entity::alias::util::InputArgs;
 use std::net::SocketAddr;
 use std::str::FromStr;
-use crate::entity::alias::util::InputArgs;
-use crate::frontend::command::parser::parser::SystemCall;
 
 pub fn read_addr(args: &mut InputArgs) -> anyhow::Result<SocketAddr> {
-    args
-        .next()
+    args.next()
         .ok_or(anyhow::anyhow!("no addr given"))
         .and_then(|e| match SocketAddr::from_str(e) {
             Ok(e) => Ok(e),
@@ -14,7 +12,7 @@ pub fn read_addr(args: &mut InputArgs) -> anyhow::Result<SocketAddr> {
 }
 pub fn read_str(args: &mut InputArgs, typed: &str) -> anyhow::Result<String> {
     match args.next() {
-        None => Err(anyhow::anyhow!("No {} Param Given",typed)),
+        None => Err(anyhow::anyhow!("No {} Param Given", typed)),
         Some(s) => Ok(s.to_string()),
     }
 }
