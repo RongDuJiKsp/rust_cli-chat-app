@@ -12,15 +12,16 @@ use std::collections::VecDeque;
 use std::io;
 use std::sync::Arc;
 use tokio::sync::Semaphore;
+use crate::frontend::view::tsk::WriteToBufTask;
 
 #[derive(Clone)]
 pub struct PrinterCtx {
-    write_buffer: SharedRWPtr<String>,
-    screen_buffer: SharedRWPtr<VecDeque<String>>,
-    screen_view: SharedRWPtr<u16>,
-    command_status_ctx: SharedRWPtr<CommandStatus>,
-    command_history: SharedPtr<HistoryLoader<String>>,
-    stdout_lock: Arc<Semaphore>,
+    pub(super) write_buffer: SharedRWPtr<String>,
+    pub(super) screen_buffer: SharedRWPtr<VecDeque<String>>,
+    pub(super) screen_view: SharedRWPtr<u16>,
+    pub(super) command_status_ctx: SharedRWPtr<CommandStatus>,
+    pub(super) command_history: SharedPtr<HistoryLoader<String>>,
+    pub(super) stdout_lock: Arc<Semaphore>,
 }
 impl PrinterCtx {
     pub fn new() -> PrinterCtx {
@@ -46,6 +47,9 @@ impl PrinterCtx {
         self.screen_buffer.write().await.push_back(o);
         self.flush_screen_buffer().await?;
         Ok(())
+    }
+    pub fn write_with_task(&self) -> WriteToBufTask {
+        WriteToBufTask::new(self)
     }
     pub async fn flush_all(&self) -> anyhow::Result<()> {
         self.flush_screen_buffer().await?;

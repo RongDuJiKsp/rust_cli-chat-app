@@ -35,7 +35,8 @@ impl ChatCtx {
             None => { bail!("No Chatting") }
             Some(e) => e
         };
-        ctx.write_many(self.history_char.read().await.get(&tg).ok_or(anyhow::anyhow!("No init chat"))?.read().await.clone()).await?;
+        let output = self.history_char.read().await.get(&tg).ok_or(anyhow::anyhow!("No init chat"))?.read().await.clone();
+        ctx.write_with_task().with_many(output).with_cls().run().await;
         Ok(())
     }
     pub async fn send_msg(&self, ctx: &ConnCtx, msg: String) -> anyhow::Result<()> {
