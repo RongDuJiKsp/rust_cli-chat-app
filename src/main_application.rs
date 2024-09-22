@@ -1,3 +1,4 @@
+use crate::backend::chat::ctx::ChatCtx;
 use crate::backend::connect::ctx::ConnCtx;
 use crate::backend::connect::event::{ConnChan, ConnectHandler};
 use crate::backend::connect::event_hd::{hd_conn_event, hd_message_event};
@@ -25,6 +26,7 @@ struct ApplicationArgs {
 pub struct ApplicationLifetime {
     pub printer: PrinterCtx,
     pub conn: ConnCtx,
+    pub chat: ChatCtx,
     pub event_loop: AppEventLoopContext,
 }
 pub struct ChannelUnions {
@@ -59,6 +61,8 @@ impl MainApplication {
                 conn_ctx.addr()
             )))
             .await?;
+        // init chat
+        let chat_ctx = ChatCtx::new();
         //init loop_ctx
         let event_loop_ctx = AppEventLoopContext::init();
         //ok
@@ -68,6 +72,7 @@ impl MainApplication {
         let ctx = ApplicationLifetime {
             printer: printer_ctx,
             conn: conn_ctx,
+            chat: chat_ctx,
             event_loop: event_loop_ctx,
         };
         let channel_unions = ChannelUnions {

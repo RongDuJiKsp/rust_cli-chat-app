@@ -1,4 +1,6 @@
+use crate::backend::connect::alias::MetaSocketAddr;
 use crate::backend::connect::resp_frame_reader::FrameReaderManager;
+use crate::config::message::MESSAGE_SPLITTER;
 use crate::entity::alias::sync::{PtrFac, SharedPtr, SharedRWPtr};
 use crate::entity::dto::base_body::BaseSocketMessageBody;
 use std::collections::HashMap;
@@ -7,8 +9,6 @@ use std::sync::Arc;
 use tokio::io::AsyncWriteExt;
 use tokio::net::tcp::OwnedWriteHalf;
 use tokio::net::TcpStream;
-use crate::backend::connect::alias::MetaSocketAddr;
-use crate::config::message::MESSAGE_SPLITTER;
 
 pub type LivingConn = Vec<MetaSocketAddr>;
 pub type DeadConn = Vec<MetaSocketAddr>;
@@ -90,16 +90,28 @@ impl ConnCtx {
         let (mut liv, mut dead) = (Vec::new(), Vec::new());
         for (addr, conn) in &*self.as_server.read().await {
             match conn.lock().await.write(&[MESSAGE_SPLITTER]).await {
-                Ok(_) => liv.push(MetaSocketAddr::pkg(addr.clone(), "(Conn to Client)".to_string())),
-                Err(_) => dead.push(MetaSocketAddr::pkg(addr.clone(), "(Conn to Client)".to_string()))
+                Ok(_) => liv.push(MetaSocketAddr::pkg(
+                    addr.clone(),
+                    "(Conn to Client)".to_string(),
+                )),
+                Err(_) => dead.push(MetaSocketAddr::pkg(
+                    addr.clone(),
+                    "(Conn to Client)".to_string(),
+                )),
             }
-        };
+        }
         for (addr, conn) in &*self.as_client.read().await {
             match conn.lock().await.write(&[MESSAGE_SPLITTER]).await {
-                Ok(_) => liv.push(MetaSocketAddr::pkg(addr.clone(), "(Conn to Server)".to_string())),
-                Err(_) => dead.push(MetaSocketAddr::pkg(addr.clone(), "(Conn to Server)".to_string()))
+                Ok(_) => liv.push(MetaSocketAddr::pkg(
+                    addr.clone(),
+                    "(Conn to Server)".to_string(),
+                )),
+                Err(_) => dead.push(MetaSocketAddr::pkg(
+                    addr.clone(),
+                    "(Conn to Server)".to_string(),
+                )),
             }
-        };
+        }
         (liv, dead)
     }
     pub fn addr(&self) -> SocketAddr {

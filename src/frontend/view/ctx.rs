@@ -1,6 +1,7 @@
 use crate::config::buffer_size::SCREEN_BUFFER_SIZE;
 use crate::config::style::CANT_PRINT_RANGE_HEIGHT;
 use crate::entity::alias::sync::{PtrFac, SharedPtr, SharedRWPtr};
+use crate::frontend::command::runner::plainer::CommendPlainer;
 use crate::frontend::command::status::CommandStatus;
 use crate::main_application::ApplicationLifetime;
 use crate::util::history_loader::HistoryLoader;
@@ -11,7 +12,6 @@ use std::collections::VecDeque;
 use std::io;
 use std::sync::Arc;
 use tokio::sync::Semaphore;
-use crate::frontend::command::runner::plainer::CommendPlainer;
 
 #[derive(Clone)]
 pub struct PrinterCtx {
@@ -63,14 +63,14 @@ impl PrinterCtx {
     pub async fn user_cmd_history(&self, off: i8) -> anyhow::Result<()> {
         let his_cmd = match off {
             1 => match self.command_history.lock().await.easily() {
-                None => { return Ok(()) }
-                Some(cmd) => cmd
+                None => return Ok(()),
+                Some(cmd) => cmd,
             },
             -1 => match self.command_history.lock().await.later() {
-                None => { return Ok(()) }
-                Some(cmd) => cmd
+                None => return Ok(()),
+                Some(cmd) => cmd,
             },
-            _ => { return Err(anyhow::anyhow!("Op must be 1 or -1")) }
+            _ => return Err(anyhow::anyhow!("Op must be 1 or -1")),
         };
         *self.write_buffer.write().await = his_cmd;
         self.flush_input().await?;
@@ -242,7 +242,7 @@ impl PrinterCtx {
                 .expect("Couldn't acquire screen buffer");
             execute!(stdout, cursor::SavePosition);
             //清屏
-            for screen_line in 0..can_print{
+            for screen_line in 0..can_print {
                 execute!(stdout, cursor::MoveTo(0, screen_line));
                 execute!(stdout, terminal::Clear(terminal::ClearType::CurrentLine));
             }

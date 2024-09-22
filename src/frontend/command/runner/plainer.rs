@@ -50,17 +50,18 @@ impl CommendPlainer {
                 };
                 res.output.append(&mut log);
             }
-            SystemCall::ConnStatus => {
-                match CmdCallHandler::call_conn_status(&self.app).await {
-                    Ok(out) => {
-                        res.output = out;
-                        res.need_clear = true;
-                    }
-                    Err(e) => {
-                        res.output.append(&mut LogFormatter::error(&format!("Error on Get connect status：{}", e)));
-                    }
+            SystemCall::ConnStatus => match CmdCallHandler::call_conn_status(&self.app).await {
+                Ok(out) => {
+                    res.output = out;
+                    res.need_clear = true;
                 }
-            }
+                Err(e) => {
+                    res.output.append(&mut LogFormatter::error(&format!(
+                        "Error on Get connect status：{}",
+                        e
+                    )));
+                }
+            },
         }
         Ok(res)
     }

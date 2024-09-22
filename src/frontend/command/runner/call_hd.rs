@@ -1,6 +1,5 @@
 use crate::main_application::ApplicationLifetime;
 use std::net::SocketAddr;
-use serde_json::to_string;
 
 type Ctx<'a> = &'a ApplicationLifetime;
 pub struct CmdCallHandler;

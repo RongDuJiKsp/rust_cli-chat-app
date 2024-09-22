@@ -1,6 +1,6 @@
-use std::net::SocketAddr;
 use crate::main_application::ApplicationLifetime;
 use crate::util::log_fmt::LogFormatter;
+use std::net::SocketAddr;
 
 pub async fn hd_ep_msgbox(
     app: &ApplicationLifetime,

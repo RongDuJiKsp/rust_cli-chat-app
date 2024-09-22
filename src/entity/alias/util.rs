@@ -1,3 +1,3 @@
 use std::str::SplitWhitespace;
 
-pub type InputArgs<'a>=SplitWhitespace<'a>;
+pub type InputArgs<'a> = SplitWhitespace<'a>;
