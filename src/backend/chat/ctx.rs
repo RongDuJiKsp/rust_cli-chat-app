@@ -106,10 +106,10 @@ impl ChatCtx {
                     msg,
                     me: conn.addr(),
                 }
-                    .to_json()?,
+                .to_json()?,
             ),
         )
-            .await?;
+        .await?;
         Ok(())
     }
 }
