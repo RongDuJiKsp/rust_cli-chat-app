@@ -18,10 +18,9 @@ pub async fn hd_ep_msgbox(
 }
 pub async fn hd_ep_chat(
     app: &ApplicationLifetime,
-    addr: SocketAddr,
     raw: String,
 ) -> anyhow::Result<()> {
-    app.chat.new_msg(BaseChatMessageBody { me: addr, msg: raw }).await?;
+    app.chat.new_msg(BaseChatMessageBody ::from_json(&raw)?).await?;
     app.chat.print_to(&app.printer).await?;
     Ok(())
 }

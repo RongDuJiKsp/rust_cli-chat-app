@@ -15,8 +15,8 @@ pub async fn hd_message_event(app: &ApplicationLifetime, msg: FrameBody) -> anyh
             hd_ep_msgbox(app, addr, frame.be_raw()).await?;
         }
         "chat" => {
-            let FrameBody { addr, frame } = msg;
-            hd_ep_chat(app, addr, frame.be_raw()).await?;
+            let FrameBody { addr: _addr, frame } = msg;
+            hd_ep_chat(app, frame.be_raw()).await?;
         }
         _ => {}
     }
