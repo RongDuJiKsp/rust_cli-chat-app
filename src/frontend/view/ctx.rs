@@ -241,9 +241,14 @@ impl PrinterCtx {
                 .await
                 .expect("Couldn't acquire screen buffer");
             execute!(stdout, cursor::SavePosition);
+            //清屏
+            for screen_line in 0..can_print{
+                execute!(stdout, cursor::MoveTo(0, screen_line));
+                execute!(stdout, terminal::Clear(terminal::ClearType::CurrentLine));
+            }
+            //打印内容
             for (local, chuck) in out_buf.into_iter().skip(delta as usize).rev().enumerate() {
                 execute!(stdout, cursor::MoveTo(0, local as u16));
-                execute!(stdout, terminal::Clear(terminal::ClearType::CurrentLine));
                 execute!(stdout, style::Print(chuck));
             }
             execute!(stdout, cursor::RestorePosition);

@@ -7,7 +7,11 @@ use std::sync::Arc;
 use tokio::io::AsyncWriteExt;
 use tokio::net::tcp::OwnedWriteHalf;
 use tokio::net::TcpStream;
+use crate::backend::connect::alias::MetaSocketAddr;
+use crate::config::message::MESSAGE_SPLITTER;
 
+pub type LivingConn = Vec<MetaSocketAddr>;
+pub type DeadConn = Vec<MetaSocketAddr>;
 pub type OnlyWriteLockedTcpStream = SharedPtr<OwnedWriteHalf>;
 #[derive(Clone)]
 pub struct ConnCtx {
@@ -81,6 +85,22 @@ impl ConnCtx {
                 Some(s) => Some(s),
             },
         }
+    }
+    pub async fn conn_status(&self) -> (LivingConn, DeadConn) {
+        let (mut liv, mut dead) = (Vec::new(), Vec::new());
+        for (addr, conn) in &*self.as_server.read().await {
+            match conn.lock().await.write(&[MESSAGE_SPLITTER]).await {
+                Ok(_) => liv.push(MetaSocketAddr::pkg(addr.clone(), "(Conn to Client)".to_string())),
+                Err(_) => dead.push(MetaSocketAddr::pkg(addr.clone(), "(Conn to Client)".to_string()))
+            }
+        };
+        for (addr, conn) in &*self.as_client.read().await {
+            match conn.lock().await.write(&[MESSAGE_SPLITTER]).await {
+                Ok(_) => liv.push(MetaSocketAddr::pkg(addr.clone(), "(Conn to Server)".to_string())),
+                Err(_) => dead.push(MetaSocketAddr::pkg(addr.clone(), "(Conn to Server)".to_string()))
+            }
+        };
+        (liv, dead)
     }
     pub fn addr(&self) -> SocketAddr {
         self.this

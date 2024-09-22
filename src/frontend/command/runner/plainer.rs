@@ -51,7 +51,7 @@ impl CommendPlainer {
                 res.output.append(&mut log);
             }
             SystemCall::ConnStatus => {
-                match CmdCallHandler::call_conn_status(&self.app) {
+                match CmdCallHandler::call_conn_status(&self.app).await {
                     Ok(out) => {
                         res.output = out;
                         res.need_clear = true;
