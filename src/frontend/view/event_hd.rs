@@ -14,7 +14,6 @@ pub async fn hd_terminal_event(
         if key.modifiers.contains(KeyModifiers::CONTROL) && key.code == KeyCode::Char('c') {
             println!("Ctrl+C pressed, exiting...");
             app.close().await;
-            println!("Press any key to quit");
             return Ok(());
         }
         //只处理按下，不处理释放,防止重复导致的问题
