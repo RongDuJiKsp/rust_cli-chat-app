@@ -45,6 +45,9 @@ impl FrameReaderManager {
                 }
                 for bytes in buffer[0..read_size].iter().cloned().collect::<Vec<_>>() {
                     if bytes == MESSAGE_SPLITTER {
+                        if un_hd_buf.is_empty() {
+                            continue;
+                        }
                         let body = match BaseSocketMessageBody::unmarshal(&un_hd_buf) {
                             Ok(b) => b,
                             Err(_) => {
