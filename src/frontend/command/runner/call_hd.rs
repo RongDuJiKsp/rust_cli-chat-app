@@ -22,4 +22,9 @@ impl CmdCallHandler {
             .await?;
         Ok(())
     }
+    pub async fn call_conn_status(ctx: Ctx<'_>) -> anyhow::Result<Vec<String>> {
+        let mut io_buf = Vec::new();
+
+        Ok(io_buf)
+    }
 }

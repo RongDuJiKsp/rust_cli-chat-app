@@ -3,6 +3,7 @@ use crate::backend::connect::resp_frame_reader::FrameBody;
 use crate::main_application::ApplicationLifetime;
 use crate::util::log_fmt::LogFormatter;
 use std::net::SocketAddr;
+use crate::backend::connect::endpoint_hd::hd_ep_msgbox;
 
 pub async fn hd_conn_event(app: &ApplicationLifetime, hd: ConnPointHd) -> anyhow::Result<()> {
     app.conn.add_client(hd.1, hd.0).await;
@@ -17,18 +18,5 @@ pub async fn hd_message_event(app: &ApplicationLifetime, msg: FrameBody) -> anyh
         }
         _ => {}
     }
-    Ok(())
-}
-async fn hd_ep_msgbox(
-    app: &ApplicationLifetime,
-    addr: SocketAddr,
-    raw: String,
-) -> anyhow::Result<()> {
-    app.printer
-        .write_many(LogFormatter::info(&format!(
-            "A msgbox from {} is : {}",
-            addr, raw
-        )))
-        .await?;
     Ok(())
 }

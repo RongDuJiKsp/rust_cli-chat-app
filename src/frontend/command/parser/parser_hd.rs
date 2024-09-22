@@ -1,9 +1,12 @@
-use crate::frontend::command::parser::SystemCall;
+
 use std::net::SocketAddr;
-use std::str::{FromStr, SplitWhitespace};
+use std::str::{FromStr};
+use crate::entity::alias::util::InputArgs;
+use crate::frontend::command::parser::parser::SystemCall;
+
 pub struct ParserHandler;
 impl ParserHandler {
-    pub fn hd_conn_cmd(mut args: SplitWhitespace) -> SystemCall {
+    pub fn hd_conn_cmd(mut args: InputArgs) -> SystemCall {
         let addr = match args.next() {
             None => {
                 return SystemCall::Exception("no addr given in conn".to_string());
@@ -15,7 +18,7 @@ impl ParserHandler {
             Ok(addr) => SystemCall::ConnTcpSocket(addr),
         }
     }
-    pub fn hd_dis_conn_cmd(mut args: SplitWhitespace) -> SystemCall {
+    pub fn hd_dis_conn_cmd(mut args: InputArgs) -> SystemCall {
         let addr = match args.next() {
             None => {
                 return SystemCall::Exception("no addr given in conn".to_string());
@@ -27,7 +30,7 @@ impl ParserHandler {
             Ok(addr) => SystemCall::DisconnectTcpSocket(addr),
         }
     }
-    pub fn hd_unsafe_msgbox(mut args: SplitWhitespace) -> SystemCall {
+    pub fn hd_unsafe_msgbox(mut args: InputArgs) -> SystemCall {
         let addr = match args
             .next()
             .ok_or(anyhow::anyhow!("no addr given"))
@@ -43,5 +46,8 @@ impl ParserHandler {
             Some(s) => s.to_string(),
         };
         SystemCall::UnsafeMsgbox(addr, msg)
+    }
+    pub fn hd_conn_status() -> SystemCall {
+        SystemCall::ConnStatus
     }
 }

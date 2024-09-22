@@ -1,7 +1,6 @@
 use crate::config::buffer_size::SCREEN_BUFFER_SIZE;
 use crate::config::style::CANT_PRINT_RANGE_HEIGHT;
 use crate::entity::alias::sync::{PtrFac, SharedPtr, SharedRWPtr};
-use crate::frontend::command::plainer::CommendPlainer;
 use crate::frontend::command::status::CommandStatus;
 use crate::main_application::ApplicationLifetime;
 use crate::util::history_loader::HistoryLoader;
@@ -12,6 +11,7 @@ use std::collections::VecDeque;
 use std::io;
 use std::sync::Arc;
 use tokio::sync::Semaphore;
+use crate::frontend::command::runner::plainer::CommendPlainer;
 
 #[derive(Clone)]
 pub struct PrinterCtx {

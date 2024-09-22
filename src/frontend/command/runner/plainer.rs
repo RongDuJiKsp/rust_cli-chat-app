@@ -1,5 +1,5 @@
-use crate::frontend::command::call_hd::CmdCallHandler;
-use crate::frontend::command::parser::{CommandParser, SystemCall};
+use crate::frontend::command::parser::parser::{CommandParser, SystemCall};
+use crate::frontend::command::runner::call_hd::CmdCallHandler;
 use crate::main_application::ApplicationLifetime;
 use crate::util::log_fmt::LogFormatter;
 
@@ -49,6 +49,17 @@ impl CommendPlainer {
                     Err(e) => LogFormatter::error(&format!("Error on Send msgbox：{}", e)),
                 };
                 res.output.append(&mut log);
+            }
+            SystemCall::ConnStatus => {
+                match CmdCallHandler::call_conn_status(&self.app) {
+                    Ok(out) => {
+                        res.output = out;
+                        res.need_clear = true;
+                    }
+                    Err(e) => {
+                        res.output.append(&mut LogFormatter::error(&format!("Error on Get connect status：{}", e)));
+                    }
+                }
             }
         }
         Ok(res)
