@@ -71,6 +71,9 @@ impl ChatCtx {
         Ok(())
     }
     pub async fn new_msg(&self, msg: BaseChatMessageBody) -> anyhow::Result<()> {
+        if !self.history_char.read().await.contains_key(&msg.me) {
+            self.init_chat(&msg.me).await;
+        }
         self.history_char
             .read()
             .await
@@ -99,10 +102,10 @@ impl ChatCtx {
                     msg,
                     me: conn.addr(),
                 }
-                .to_json()?,
+                    .to_json()?,
             ),
         )
-        .await?;
+            .await?;
         Ok(())
     }
 }
