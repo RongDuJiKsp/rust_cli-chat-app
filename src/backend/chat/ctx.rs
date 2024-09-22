@@ -2,6 +2,9 @@ use crate::backend::connect::ctx::ConnCtx;
 use crate::entity::alias::sync::{PtrFac, SharedPtr, SharedRWPtr};
 use std::collections::HashMap;
 use std::net::SocketAddr;
+use anyhow::bail;
+use crate::backend::chat::body::BaseChatMessageBody;
+use crate::frontend::view::ctx::PrinterCtx;
 
 #[derive(Clone)]
 pub struct ChatCtx {
@@ -16,7 +19,7 @@ impl ChatCtx {
         }
     }
     pub async fn change_chat(&self, chat: &SocketAddr) {
-        let now = self.chatting.lock().await;
+        let mut now = self.chatting.lock().await;
         if now.is_some() && now.unwrap() == *chat {
             return;
         }
@@ -26,8 +29,18 @@ impl ChatCtx {
             self.init_chat(chat).await;
         }
     }
+    pub async fn print_to(&self, ctx: &PrinterCtx) -> anyhow::Result<()> {
+        let chatting = self.chatting.lock().await;
+        let tg = match *chatting {
+            None => { bail!("No Chatting") }
+            Some(e) => e
+        };
+        ctx.write_many(self.history_char.read().await.get(&tg).ok_or(anyhow::anyhow!("No init chat"))?.read().await.clone()).await?;
+        Ok(())
+    }
     pub async fn send_msg(&self, ctx: &ConnCtx, msg: String) -> anyhow::Result<()> {
         if let Some(c) = &*self.chatting.lock().await {
+            Self::send(ctx, c, msg.clone()).await?;
             self.history_char
                 .read()
                 .await
@@ -35,12 +48,24 @@ impl ChatCtx {
                 .ok_or(anyhow::anyhow!("chat not init"))?
                 .write()
                 .await
-                .push(msg.clone())
+                .push(format!("[From You] {}", msg))
         } else {
-            anyhow::bail!("No chat selected")
+            bail!("No chat selected")
         }
         Ok(())
     }
+    pub async fn new_msg(&self, msg: BaseChatMessageBody) -> anyhow::Result<()> {
+        self.history_char
+            .read()
+            .await
+            .get(&msg.me)
+            .ok_or(anyhow::anyhow!("chat not init"))?
+            .write()
+            .await
+            .push(format!("[To You] {}", msg.msg.clone()));
+        Ok(())
+    }
+
     async fn init_chat(&self, addr: &SocketAddr) {
         let mut body = Vec::new();
         body.push(format!("--------Chat between {} ----", addr));
@@ -48,5 +73,9 @@ impl ChatCtx {
             .write()
             .await
             .insert(addr.clone(), PtrFac::shared_rw_ptr(body));
+    }
+    async fn send(conn: &ConnCtx, addr: &SocketAddr, msg: String) -> anyhow::Result<()> {
+        conn.send_raw(addr.clone(), "chat".to_string(), Some(msg)).await?;
+        Ok(())
     }
 }

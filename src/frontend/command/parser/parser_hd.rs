@@ -2,6 +2,8 @@ use crate::entity::alias::util::InputArgs;
 use crate::frontend::command::parser::parser::SystemCall;
 use std::net::SocketAddr;
 use std::str::FromStr;
+use anyhow::Error;
+use crate::frontend::command::parser::tool::{read_addr, read_str};
 
 pub struct ParserHandler;
 impl ParserHandler {
@@ -30,23 +32,36 @@ impl ParserHandler {
         }
     }
     pub fn hd_unsafe_msgbox(mut args: InputArgs) -> SystemCall {
-        let addr = match args
-            .next()
-            .ok_or(anyhow::anyhow!("no addr given"))
-            .and_then(|e| match SocketAddr::from_str(e) {
-                Ok(e) => Ok(e),
-                Err(e) => Err(anyhow::anyhow!("{}", e)),
-            }) {
-            Ok(a) => a,
-            Err(e) => return SystemCall::Exception(format!("error on addr: {}", e.to_string())),
+        let addr = match read_addr(&mut args) {
+            Ok(d) => d,
+            Err(e) => {
+                return SystemCall::Exception(e.to_string())
+            }
         };
-        let msg = match args.next() {
-            None => return SystemCall::Exception("no msg given".to_string()),
-            Some(s) => s.to_string(),
+        let msg = match read_str(&mut args, "msg") {
+            Ok(e) => e,
+            Err(e) => {
+                return SystemCall::Exception(e.to_string())
+            }
         };
         SystemCall::UnsafeMsgbox(addr, msg)
     }
-    pub fn hd_conn_status() -> SystemCall {
-        SystemCall::ConnStatus
+    pub fn hd_chat_with(mut args: InputArgs) -> SystemCall {
+        let addr = match read_addr(&mut args) {
+            Ok(d) => d,
+            Err(e) => {
+                return SystemCall::Exception(e.to_string())
+            }
+        };
+        SystemCall::ChatWith(addr)
+    }
+    pub fn hd_chat_send_msg(mut args: InputArgs) -> SystemCall {
+        let msg = match read_str(&mut args, "msg") {
+            Ok(e) => e,
+            Err(e) => {
+                return SystemCall::Exception(e.to_string())
+            }
+        };
+        SystemCall::ChatMsg(msg)
     }
 }

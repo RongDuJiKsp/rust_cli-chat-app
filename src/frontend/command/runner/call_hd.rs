@@ -43,4 +43,15 @@ impl CmdCallHandler {
         }
         Ok(io_buf)
     }
+    pub async fn call_chat_with(ctx: Ctx<'_>, with: &SocketAddr) {
+        ctx.chat.change_chat(with).await;
+        let _ = ctx.chat.print_to(&ctx.printer).await;
+    }
+    pub async fn call_chat_send_msg(ctx: Ctx<'_>, msg: String) {
+        if let Err(e) = ctx.chat.send_msg(&ctx.conn, msg).await {
+            let _ = ctx.printer.write_output(format!("[Failed] 发送时发生了问题：{}", e)).await;
+        } else {
+            let _ = ctx.chat.print_to(&ctx.printer).await;
+        }
+    }
 }

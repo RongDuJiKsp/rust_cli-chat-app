@@ -107,14 +107,15 @@ impl PrinterCtx {
                     return;
                 }
             };
-            let mut buf_writer = that_app.printer.screen_buffer.write().await;
-            if exec_res.need_clear() {
-                buf_writer.clear();
+            if !exec_res.no_fresh() {
+                let mut buf_writer = that_app.printer.screen_buffer.write().await;
+                if exec_res.need_clear() {
+                    buf_writer.clear();
+                }
+                for output in exec_res.output().into_iter() {
+                    buf_writer.push_back(output);
+                }
             }
-            for output in exec_res.output().into_iter() {
-                buf_writer.push_back(output);
-            }
-            drop(buf_writer);
             let _ = that_app.printer.flush_all().await;
         });
         Ok(())

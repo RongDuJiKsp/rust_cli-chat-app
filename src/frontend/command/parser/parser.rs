@@ -7,6 +7,8 @@ pub enum SystemCall {
     DisconnectTcpSocket(SocketAddr),
     UnsafeMsgbox(SocketAddr, String),
     ConnStatus,
+    ChatWith(SocketAddr),
+    ChatMsg(String),
     Exception(String),
     Unknown,
 }
@@ -15,8 +17,14 @@ impl SystemCall {
         match name {
             "conn" => ParserHandler::hd_conn_cmd(cmd_words),
             "disconn" => ParserHandler::hd_dis_conn_cmd(cmd_words),
+            "sta!" => SystemCall::ConnStatus,
             "connsta" => SystemCall::ConnStatus,
             "msg!" => ParserHandler::hd_unsafe_msgbox(cmd_words),
+            "msgbox" => ParserHandler::hd_unsafe_msgbox(cmd_words),
+            "cw!" => ParserHandler::hd_chat_with(cmd_words),
+            "chatwith" => ParserHandler::hd_chat_with(cmd_words),
+            "chat!" => ParserHandler::hd_chat_send_msg(cmd_words),
+            "chatmsg"=>ParserHandler::hd_chat_send_msg(cmd_words),
             _ => SystemCall::Unknown,
         }
     }

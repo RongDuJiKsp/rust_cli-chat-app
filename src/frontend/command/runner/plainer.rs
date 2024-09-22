@@ -53,7 +53,7 @@ impl CommendPlainer {
             SystemCall::ConnStatus => match CmdCallHandler::call_conn_status(&self.app).await {
                 Ok(out) => {
                     res.output = out;
-                    res.need_clear = true;
+                    res._need_clear();
                 }
                 Err(e) => {
                     res.output.append(&mut LogFormatter::error(&format!(
@@ -62,6 +62,14 @@ impl CommendPlainer {
                     )));
                 }
             },
+            SystemCall::ChatWith(addr) => {
+                CmdCallHandler::call_chat_with(&self.app, &addr).await;
+                res._no_fresh();
+            }
+            SystemCall::ChatMsg(s) => {
+                CmdCallHandler::call_chat_send_msg(&self.app, s).await;
+                res._no_fresh();
+            }
         }
         Ok(res)
     }
@@ -69,12 +77,14 @@ impl CommendPlainer {
 pub struct CommendExecResult {
     output: Vec<String>,
     need_clear: bool,
+    no_fresh: bool,
 }
 impl CommendExecResult {
     fn new() -> CommendExecResult {
         CommendExecResult {
             output: Vec::new(),
             need_clear: false,
+            no_fresh: false,
         }
     }
 
@@ -83,5 +93,14 @@ impl CommendExecResult {
     }
     pub fn output(self) -> Vec<String> {
         self.output
+    }
+    pub fn no_fresh(&self) -> bool {
+        self.no_fresh
+    }
+    fn _need_clear(&mut self) {
+        self.need_clear = true;
+    }
+    fn _no_fresh(&mut self) {
+        self.no_fresh = true;
     }
 }
