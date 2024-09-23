@@ -35,10 +35,10 @@ impl ParserHandler {
             Ok(d) => d,
             Err(e) => return SystemCall::Exception(e.to_string()),
         };
-        let msg = match read_str(&mut args, "msg") {
-            Ok(e) => e,
-            Err(e) => return SystemCall::Exception(e.to_string()),
-        };
+        let msg = read_str(&mut args);
+        if msg.is_empty() {
+            return SystemCall::Exception("MsgBox Is Null".to_string());
+        }
         SystemCall::UnsafeMsgbox(addr, msg)
     }
     pub fn hd_chat_with(mut args: InputArgs) -> SystemCall {
@@ -49,10 +49,10 @@ impl ParserHandler {
         SystemCall::ChatWith(addr)
     }
     pub fn hd_chat_send_msg(mut args: InputArgs) -> SystemCall {
-        let msg = match read_str(&mut args, "msg") {
-            Ok(e) => e,
-            Err(e) => return SystemCall::Exception(e.to_string()),
-        };
+        let msg = read_str(&mut args);
+        if msg.is_empty() {
+            return SystemCall::Exception("Chat Message Is Null".to_string());
+        }
         SystemCall::ChatMsg(msg)
     }
 }

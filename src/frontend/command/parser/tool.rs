@@ -10,9 +10,8 @@ pub fn read_addr(args: &mut InputArgs) -> anyhow::Result<SocketAddr> {
             Err(e) => Err(anyhow::anyhow!("{}", e)),
         })
 }
-pub fn read_str(args: &mut InputArgs, typed: &str) -> anyhow::Result<String> {
-    match args.next() {
-        None => Err(anyhow::anyhow!("No {} Param Given", typed)),
-        Some(s) => Ok(s.to_string()),
-    }
+pub fn read_str(args: &mut InputArgs) -> String {
+    args.map(|x| x.to_string())
+        .collect::<Vec<String>>()
+        .join(" ")
 }
