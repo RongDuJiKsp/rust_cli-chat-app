@@ -98,11 +98,7 @@ impl ChatCtx {
             .insert(addr.clone(), PtrFac::shared_rw_ptr(body));
     }
     async fn send(conn: &ConnCtx, addr: &SocketAddr, msg: String) -> anyhow::Result<()> {
-        conn.send_raw(
-            addr.clone(),
-            "chat".to_string(),
-            Some(msg),
-        )
+        conn.send_raw(addr.clone(), "chat".to_string(), Some(msg))
             .await?;
         Ok(())
     }
