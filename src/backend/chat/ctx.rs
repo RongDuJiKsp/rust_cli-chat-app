@@ -101,15 +101,9 @@ impl ChatCtx {
         conn.send_raw(
             addr.clone(),
             "chat".to_string(),
-            Some(
-                BaseChatMessageBody {
-                    msg,
-                    me: conn.addr(),
-                }
-                .to_json()?,
-            ),
+            Some(msg),
         )
-        .await?;
+            .await?;
         Ok(())
     }
 }
