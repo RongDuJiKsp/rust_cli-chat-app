@@ -4,7 +4,17 @@
 cargo build -r
 #### Usage
 ##### start
-`./bin`
+```
+Usage: simple_chat.exe [OPTIONS]
+
+Options:
+  -p, --port <PORT> The appliation listen port [default: random]
+  -b, --bind_ip <BIND_IP>            [default: 127.0.0.1] The appliation bind ip
+  -n, --nick <NICK> not use
+  -f, --channel_size <CHANNEL_SIZE>  [default: 1024] the buffer size
+  -h, --help                         Print help
+
+```
 ##### commands
 `conn <remote Address>` connect to another client  
 
